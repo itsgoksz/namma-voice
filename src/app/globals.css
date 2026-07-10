@@ -1,26 +1,101 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #000000;
+  --foreground: #ffffff;
+  --coral: #ff4d6d;
+  --coral-dim: rgba(255, 77, 109, 0.2);
+  --card-bg: rgba(20, 20, 20, 0.85);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --text-secondary: #a1a1aa;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-neon: var(--coral);
+  --color-neon-dim: var(--coral-dim);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-text-secondary: var(--text-secondary);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.glass-panel {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  border-radius: 1.5rem; /* 24px */
+}
+
+.glass-nav {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--card-border);
+}
+
+.text-neon {
+  color: var(--coral);
+}
+
+.bg-neon {
+  background-color: var(--coral);
+}
+
+.shadow-neon {
+  box-shadow: 0 0 25px var(--coral);
+}
+
+/* Starfield Effect CSS */
+.starfield-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  background-color: #000000;
+  overflow: hidden;
+}
+
+.star {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+}
+
+.star.large {
+  background: #ffb3c1; /* Faint pinkish for large stars */
+  box-shadow: 0 0 10px #ffb3c1;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  scrollbar-width: none;
+}
+
+/* Fix for PWA Camera Modal overlapping with Bottom Nav */
+pwa-camera-modal-instance {
+  z-index: 9999999 !important;
+}
+
+/* Custom Black Leaflet Popup */
+.custom-popup .leaflet-popup-content-wrapper,
+.custom-popup .leaflet-popup-tip {
+  background: #0a0a0a !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.custom-popup .leaflet-popup-content-wrapper {
+  border-radius: 12px;
 }

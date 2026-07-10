@@ -1,0 +1,12 @@
+[
+  { "id": 1, "pos": [12.8950, 77.5840], "reports": 331, "severity": "high" },
+  { "id": 2, "pos": [12.8970, 77.5860], "reports": 161, "severity": "high" },
+  { "id": 3, "pos": [12.8930, 77.5820], "reports": 295, "severity": "high" },
+  { "id": 4, "pos": [12.8920, 77.5860], "reports": 146, "severity": "high" },
+  { "id": 5, "pos": [12.8960, 77.5880], "reports": 93, "severity": "medium" },
+  { "id": 6, "pos": [12.8940, 77.5890], "reports": 43, "severity": "medium" },
+  { "id": 7, "pos": [12.8910, 77.5840], "reports": 69, "severity": "medium" },
+  { "id": 8, "pos": [12.8980, 77.5820], "reports": 255, "severity": "high" },
+  { "id": 9, "pos": [12.8900, 77.5870], "reports": 5, "severity": "low" },
+  { "id": 10, "pos": [12.8990, 77.5900], "reports": 3, "severity": "low" }
+]
