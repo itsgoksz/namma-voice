@@ -34,12 +34,14 @@ export default function ProfilePage() {
   const progress = Math.min(100, Math.max(0, (user.xp / nextLevelXp) * 100));
 
   const badges = [
-    { name: "Explorer", icon: "🗺️", unlocked: user.reports_count > 0 },
-    { name: "Garbage Hunter", icon: "🗑️", unlocked: user.reports_count >= 5 },
-    { name: "Plastic Warrior", icon: "♻️", unlocked: user.reports_count >= 10 },
-    { name: "Night Owl", icon: "🦉", unlocked: false },
-    { name: "Streak Master", icon: "🔥", unlocked: false },
-    { name: "Community Star", icon: "⭐", unlocked: user.level >= 5 },
+    { name: "Explorer", icon: "🗺️", unlocked: user.reports_count >= 1 },
+    { name: "Reporter", icon: "📸", unlocked: user.reports_count >= 5 },
+    { name: "Neighbour Hero", icon: "🦸", unlocked: user.reports_count >= 10 },
+    { name: "Guardian", icon: "🛡️", unlocked: user.level >= 3 },
+    { name: "Community Champion", icon: "🏆", unlocked: user.level >= 5 },
+    { name: "City Ranger", icon: "🤠", unlocked: user.level >= 10 },
+    { name: "Earth Keeper", icon: "🌍", unlocked: user.level >= 15 },
+    { name: "Legend", icon: "👑", unlocked: user.level >= 20 },
   ];
 
   if (loading) return null;
@@ -70,7 +72,7 @@ export default function ProfilePage() {
           <h2 className="text-xl font-bold text-foreground">Level {user.level}</h2>
           <div className="flex items-center space-x-1">
             <Zap className="w-5 h-5 text-[#ff4d6d] fill-current" />
-            <span className="text-xl font-black text-white">{user.xp} XP</span>
+            <span className="text-xl font-black text-white">{user.xp} 🌏 Points</span>
           </div>
         </div>
         <div className="w-full bg-white/5 rounded-full h-3 mb-2 relative overflow-hidden">
@@ -82,7 +84,7 @@ export default function ProfilePage() {
           ></motion.div>
         </div>
         <p className="text-right text-xs text-text-secondary font-bold uppercase tracking-wider">
-          {nextLevelXp - user.xp} XP TO LEVEL {user.level + 1}
+          {nextLevelXp - user.xp} 🌏 POINTS TO LEVEL {user.level + 1}
         </p>
       </motion.div>
 

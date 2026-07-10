@@ -96,7 +96,7 @@ export default function ReportPage() {
           transition={{ delay: 0.3 }}
           className="text-3xl font-black text-white"
         >
-          +10 XP Earned!
+          +10 🌏 Points Earned!
         </motion.h1>
       </div>
     );
@@ -145,7 +145,7 @@ export default function ReportPage() {
         ) : (
           <>
             <Upload className="w-6 h-6" strokeWidth={2.5} />
-            <span>Submit & Earn +10 XP</span>
+            <span>Submit & Earn +10 🌏 Points</span>
           </>
         )}
       </motion.button>

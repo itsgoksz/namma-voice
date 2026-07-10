@@ -79,7 +79,7 @@ export default function LoginOverlay() {
             
             <div className="space-y-2">
               <h1 className="text-4xl font-black text-white tracking-tight">Namma Voice</h1>
-              <p className="text-text-secondary font-medium">Keep your streets clean. Earn XP.</p>
+              <p className="text-text-secondary font-medium">Keep your streets clean. Earn 🌏 Points.</p>
             </div>
 
             <form onSubmit={handleLogin} className="w-full space-y-4 mt-8">

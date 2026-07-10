@@ -144,7 +144,7 @@ export default function FeedPage() {
                   </div>
                 </div>
                 <div className="bg-[#ff4d6d]/10 px-3 py-1 rounded-full border border-[#ff4d6d]/20">
-                  <span className="text-[#ff4d6d] text-xs font-black">+10 XP</span>
+                  <span className="text-[#ff4d6d] text-xs font-black">+10 🌏 Points</span>
                 </div>
               </div>
 

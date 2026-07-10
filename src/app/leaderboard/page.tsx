@@ -66,7 +66,7 @@ export default function LeaderboardPage() {
               <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-2xl border border-white/20">🥈</div>
             </div>
             <p className="text-sm font-bold text-white truncate max-w-[80px]">{top3[1]?.name}</p>
-            <p className="text-[#ff4d6d] text-xs font-black">{top3[1]?.xp} XP</p>
+            <p className="text-[#ff4d6d] text-xs font-black">{top3[1]?.xp} 🌏 Points</p>
             <div className="w-full bg-[rgba(30,30,30,0.8)] h-16 rounded-t-2xl mt-2 border-t border-white/10 flex items-center justify-center">
               <span className="text-white/40 font-black text-2xl">2</span>
             </div>
@@ -81,7 +81,7 @@ export default function LeaderboardPage() {
               <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center text-3xl border-2 border-[#ff4d6d] shadow-[0_0_20px_rgba(255,77,109,0.3)]">🥇</div>
             </div>
             <p className="text-base font-bold text-white truncate max-w-[90px]">{top3[0]?.name}</p>
-            <p className="text-[#ff4d6d] text-sm font-black">{top3[0]?.xp} XP</p>
+            <p className="text-[#ff4d6d] text-sm font-black">{top3[0]?.xp} 🌏 Points</p>
             <div className="w-full bg-[rgba(40,40,40,0.9)] h-24 rounded-t-2xl mt-2 border-t border-[#ff4d6d]/30 flex items-center justify-center shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
               <span className="text-[#ff4d6d] font-black text-4xl">1</span>
             </div>
@@ -93,7 +93,7 @@ export default function LeaderboardPage() {
               <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-2xl border border-white/20">🥉</div>
             </div>
             <p className="text-sm font-bold text-white truncate max-w-[80px]">{top3[2]?.name}</p>
-            <p className="text-[#ff4d6d] text-xs font-black">{top3[2]?.xp} XP</p>
+            <p className="text-[#ff4d6d] text-xs font-black">{top3[2]?.xp} 🌏 Points</p>
             <div className="w-full bg-[rgba(20,20,20,0.8)] h-12 rounded-t-2xl mt-2 border-t border-white/5 flex items-center justify-center">
               <span className="text-white/30 font-black text-xl">3</span>
             </div>
@@ -131,7 +131,7 @@ export default function LeaderboardPage() {
                 </span>
               </div>
               <div className="flex items-center space-x-3">
-                <span className="font-black text-white">{user.xp} <span className="text-[10px] text-text-secondary uppercase">XP</span></span>
+                <span className="font-black text-white">{user.xp} <span className="text-[10px] text-text-secondary uppercase">🌏 Points</span></span>
                 {rank < 4 ? <TrendingUp className="text-[#ff4d6d] w-4 h-4" /> : rank > 7 ? <TrendingDown className="text-text-secondary w-4 h-4" /> : <Minus className="text-white/30 w-4 h-4" />}
               </div>
             </div>
@@ -139,7 +139,7 @@ export default function LeaderboardPage() {
         })}
         {leaders.length === 0 && (
           <div className="p-8 text-center text-text-secondary">
-            No reports yet. Be the first to earn XP!
+            No reports yet. Be the first to earn 🌏 Points!
           </div>
         )}
       </motion.div>
