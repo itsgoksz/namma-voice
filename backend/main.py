@@ -7,8 +7,11 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
+import os
+
 # Database Setup
-SQLALCHEMY_DATABASE_URL = "sqlite:///./namma.db"
+# We use an environment variable so we can point to a persistent volume on Railway
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./namma.db")
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
