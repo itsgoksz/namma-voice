@@ -14,7 +14,7 @@ interface FeedItem {
   timestamp: string;
   supports: number;
 }
-const pendingRequests: Record<string, Promise<string>> = {};
+const pendingRequests: Record<string, Promise<string> | undefined> = {};
 
 const geocodeWithQueue = async (lat: number, lng: number): Promise<string> => {
   const cacheKey = `namma_loc_${lat.toFixed(4)}_${lng.toFixed(4)}`;
