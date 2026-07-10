@@ -1,4 +1,4 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://rights-farm-guidance-gbp.trycloudflare.com";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://namma-voice-production.up.railway.app";
 
 // Helper to get the current logged in user from localStorage
 export const getCurrentUser = () => {
