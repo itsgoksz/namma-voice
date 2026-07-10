@@ -14,6 +14,34 @@ interface FeedItem {
   timestamp: string;
   supports: number;
 }
+// LocationTag Component for dynamic reverse geocoding
+const LocationTag = ({ lat, lng }: { lat: number, lng: number }) => {
+  const [address, setAddress] = useState("Loading...");
+
+  useEffect(() => {
+    const fetchAddress = async () => {
+      // Cache reverse geocoding results to avoid hitting API limits
+      const cacheKey = `namma_loc_${lat.toFixed(4)}_${lng.toFixed(4)}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        setAddress(cached);
+        return;
+      }
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`);
+        const data = await res.json();
+        const locName = data.address?.road || data.address?.neighbourhood || data.address?.suburb || "Unknown Location";
+        setAddress(locName);
+        localStorage.setItem(cacheKey, locName);
+      } catch (e) {
+        setAddress("Unknown Location");
+      }
+    };
+    fetchAddress();
+  }, [lat, lng]);
+
+  return <span className="text-xs text-white font-semibold shadow-sm">{address}</span>;
+};
 
 export default function FeedPage() {
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -131,7 +159,7 @@ export default function FeedPage() {
                 )}
                 <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center space-x-1 border border-white/10">
                   <MapPin className="text-[#ff4d6d] w-3 h-3" />
-                  <span className="text-xs text-white font-semibold shadow-sm">Mini Forest Road</span>
+                  <LocationTag lat={post.lat} lng={post.lng} />
                 </div>
               </div>
 
