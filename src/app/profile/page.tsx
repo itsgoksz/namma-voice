@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Award, Flame, MapPin, Zap } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Award, Flame, MapPin, Zap, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch, getCurrentUser } from "@/lib/api";
 import { getLocalStreak } from "@/lib/streak";
@@ -11,9 +11,27 @@ export default function ProfilePage() {
   const [user, setUser] = useState({ name: getCurrentUser(), level: 1, xp: 0, reports_count: 0 });
   const [loading, setLoading] = useState(true);
   const [streak, setStreak] = useState(0);
+  const [locationName, setLocationName] = useState("Locating...");
+  const [badgeMessage, setBadgeMessage] = useState<{ title: string, text: string } | null>(null);
 
   useEffect(() => {
     setStreak(getLocalStreak());
+    
+    // Fetch user location for dynamic header
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=16`);
+          const data = await res.json();
+          const loc = data.address?.neighbourhood || data.address?.suburb || data.address?.road || "Unknown Area";
+          setLocationName(loc);
+        } catch (e) {
+          setLocationName("Unknown Area");
+        }
+      },
+      () => setLocationName("Location Disabled")
+    );
+
     const fetchUser = async () => {
       try {
         const username = getCurrentUser();
@@ -37,20 +55,49 @@ export default function ProfilePage() {
   const progress = Math.min(100, Math.max(0, (user.xp / nextLevelXp) * 100));
 
   const badges = [
-    { name: "Explorer", icon: "🗺️", unlocked: user.reports_count >= 1 },
-    { name: "Reporter", icon: "📸", unlocked: user.reports_count >= 5 },
-    { name: "Neighbour Hero", icon: "🦸", unlocked: user.reports_count >= 10 },
-    { name: "Guardian", icon: "🛡️", unlocked: user.level >= 3 },
-    { name: "Community Champion", icon: "🏆", unlocked: user.level >= 5 },
-    { name: "City Ranger", icon: "🤠", unlocked: user.level >= 10 },
-    { name: "Earth Keeper", icon: "🌍", unlocked: user.level >= 15 },
-    { name: "Legend", icon: "👑", unlocked: user.level >= 20 },
+    { name: "Explorer", icon: "🗺️", unlocked: user.reports_count >= 1, req: "Make your first report." },
+    { name: "Reporter", icon: "📸", unlocked: user.reports_count >= 5, req: "Submit 5 total reports." },
+    { name: "Neighbour Hero", icon: "🦸", unlocked: user.reports_count >= 10, req: "Submit 10 total reports." },
+    { name: "Guardian", icon: "🛡️", unlocked: user.level >= 3, req: "Reach Level 3." },
+    { name: "Community Champion", icon: "🏆", unlocked: user.level >= 5, req: "Reach Level 5." },
+    { name: "City Ranger", icon: "🤠", unlocked: user.level >= 10, req: "Reach Level 10." },
+    { name: "Earth Keeper", icon: "🌍", unlocked: user.level >= 15, req: "Reach Level 15." },
+    { name: "Legend", icon: "👑", unlocked: user.level >= 20, req: "Reach Level 20." },
   ];
 
   if (loading) return null;
 
   return (
     <div className="p-4 space-y-6 pt-8 pb-32 max-w-md mx-auto relative z-10">
+      <AnimatePresence>
+        {badgeMessage && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setBadgeMessage(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-[rgba(20,20,20,0.95)] border border-white/10 p-6 rounded-3xl w-full max-w-sm shadow-2xl text-center"
+            >
+              <Info className="w-10 h-10 text-[#ff4d6d] mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-white mb-2">{badgeMessage.title}</h3>
+              <p className="text-text-secondary font-medium">{badgeMessage.text}</p>
+              <button 
+                onClick={() => setBadgeMessage(null)}
+                className="mt-6 bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-full font-semibold transition-colors"
+              >
+                Got it
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -61,7 +108,7 @@ export default function ProfilePage() {
         </h1>
         <div className="flex items-center space-x-1 mt-1 opacity-80">
           <MapPin className="text-[#ff4d6d] w-4 h-4" />
-          <p className="text-[#ff4d6d] text-sm font-semibold">JP Nagar 3rd Phase</p>
+          <p className="text-[#ff4d6d] text-sm font-semibold">{locationName}</p>
         </div>
       </motion.div>
 
@@ -121,6 +168,11 @@ export default function ProfilePage() {
           {badges.map((badge, i) => (
             <motion.div 
               key={i}
+              onClick={() => {
+                if (!badge.unlocked) {
+                  setBadgeMessage({ title: `Locked: ${badge.name}`, text: badge.req });
+                }
+              }}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.4 + i * 0.05 }}
@@ -128,7 +180,7 @@ export default function ProfilePage() {
                 "flex flex-col items-center justify-center p-3 rounded-2xl transition-all border",
                 badge.unlocked 
                   ? "bg-[rgba(20,20,20,0.85)] border-white/10 opacity-100" 
-                  : "bg-white/5 border-transparent opacity-40 grayscale"
+                  : "bg-white/5 border-transparent opacity-40 grayscale cursor-pointer hover:opacity-60"
               )}
             >
               <span className="text-3xl mb-2 filter drop-shadow-md">{badge.icon}</span>

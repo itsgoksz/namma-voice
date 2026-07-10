@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, Flame, Target, CheckCircle2 } from "lucide-react";
+import { MapPin, Navigation, Flame, Target, CheckCircle2, X, Info } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { getLocalStreak } from "@/lib/streak";
 
@@ -35,6 +35,7 @@ export default function Home() {
   const [closestMission, setClosestMission] = useState<{ id: number, lat: number, lng: number, distance: number } | null>(null);
   const [userLoc, setUserLoc] = useState<{lat: number, lng: number} | null>(null);
   const [streak, setStreak] = useState(0);
+  const [isMissionDismissed, setIsMissionDismissed] = useState(false);
 
   useEffect(() => {
     setStreak(getLocalStreak());
@@ -139,14 +140,20 @@ export default function Home() {
 
         {/* Nearby Mission Overlay */}
         <AnimatePresence>
-          {closestMission && (
+          {closestMission && !isMissionDismissed && (
             <motion.div 
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
               className="absolute bottom-4 left-4 right-4 z-[9999] glass-panel border border-[#ff4d6d]/50 bg-black/90 backdrop-blur-xl rounded-3xl p-4 shadow-[0_0_30px_rgba(255,77,109,0.3)]"
             >
-              <div className="flex items-center space-x-2 mb-2">
+              <button 
+                onClick={() => setIsMissionDismissed(true)}
+                className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center space-x-2 mb-2 pr-6">
                 <div className="w-2 h-2 bg-[#ff4d6d] rounded-full animate-ping" />
                 <p className="text-[#ff4d6d] font-black text-[10px] uppercase tracking-widest">Mission Available</p>
               </div>
@@ -167,6 +174,21 @@ export default function Home() {
                  <span className="text-white/60 text-xs font-bold uppercase tracking-wider">Completion Reward</span>
                  <span className="text-[#ff4d6d] text-sm font-black">+20 🌏 Points</span>
               </div>
+            </motion.div>
+          )}
+          {closestMission && isMissionDismissed && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0 }}
+              className="absolute bottom-4 right-4 z-[9999]"
+            >
+              <button 
+                onClick={() => setIsMissionDismissed(false)}
+                className="w-12 h-12 bg-[#ff4d6d] rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,77,109,0.5)] border border-white/20 active:scale-95 transition-transform"
+              >
+                <Info className="w-6 h-6 text-white" />
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
