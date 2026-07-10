@@ -29,7 +29,8 @@ export default function ProfilePage() {
           setLocationName("Unknown Area");
         }
       },
-      () => setLocationName("Location Disabled")
+      () => setLocationName("Location Disabled"),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
     );
 
     const fetchUser = async () => {

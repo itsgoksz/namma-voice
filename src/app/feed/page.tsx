@@ -14,30 +14,49 @@ interface FeedItem {
   timestamp: string;
   supports: number;
 }
+const pendingRequests: Record<string, Promise<string>> = {};
+
+const geocodeWithQueue = async (lat: number, lng: number): Promise<string> => {
+  const cacheKey = `namma_loc_${lat.toFixed(4)}_${lng.toFixed(4)}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) return cached;
+  
+  if (pendingRequests[cacheKey]) {
+    return pendingRequests[cacheKey];
+  }
+
+  const promise = new Promise<string>(async (resolve) => {
+    try {
+      // Small random delay to stagger simultaneous renders and avoid rate limits
+      await new Promise(r => setTimeout(r, 500 + Math.random() * 2000));
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`);
+      const data = await res.json();
+      const locName = data.address?.road || data.address?.neighbourhood || data.address?.suburb || "Unknown Location";
+      localStorage.setItem(cacheKey, locName);
+      resolve(locName);
+    } catch (e) {
+      resolve("Unknown Location");
+    }
+  });
+
+  pendingRequests[cacheKey] = promise;
+  const result = await promise;
+  delete pendingRequests[cacheKey];
+  return result;
+};
+
 // LocationTag Component for dynamic reverse geocoding
 const LocationTag = ({ lat, lng }: { lat: number, lng: number }) => {
   const [address, setAddress] = useState("Loading...");
 
   useEffect(() => {
+    let mounted = true;
     const fetchAddress = async () => {
-      // Cache reverse geocoding results to avoid hitting API limits
-      const cacheKey = `namma_loc_${lat.toFixed(4)}_${lng.toFixed(4)}`;
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        setAddress(cached);
-        return;
-      }
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`);
-        const data = await res.json();
-        const locName = data.address?.road || data.address?.neighbourhood || data.address?.suburb || "Unknown Location";
-        setAddress(locName);
-        localStorage.setItem(cacheKey, locName);
-      } catch (e) {
-        setAddress("Unknown Location");
-      }
+      const addr = await geocodeWithQueue(lat, lng);
+      if (mounted) setAddress(addr);
     };
     fetchAddress();
+    return () => { mounted = false; };
   }, [lat, lng]);
 
   return <span className="text-xs text-white font-semibold shadow-sm">{address}</span>;

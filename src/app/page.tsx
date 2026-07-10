@@ -69,7 +69,7 @@ export default function Home() {
             }
           },
           (err) => console.error("Location denied", err),
-          { enableHighAccuracy: true }
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
         );
       } catch (e) {
         console.error("Failed to load missions", e);
