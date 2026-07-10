@@ -7,6 +7,7 @@ import { MapPin, Navigation, Flame, Target, CheckCircle2, X, Info } from "lucide
 import { apiFetch } from "@/lib/api";
 import { getLocalStreak } from "@/lib/streak";
 import { getFastLocation } from "@/lib/location";
+import { Geolocation } from "@capacitor/geolocation";
 
 const GarbageMap = dynamic(() => import("@/components/GarbageMap"), {
   ssr: false,
@@ -39,6 +40,16 @@ export default function Home() {
   const [isMissionDismissed, setIsMissionDismissed] = useState(false);
 
   useEffect(() => {
+    // Proactively request native permissions (iOS/Android will show prompt, web ignores or handles gracefully)
+    const requestNativePermissions = async () => {
+      try {
+        await Geolocation.requestPermissions();
+      } catch (e) {
+        // Safe to ignore on Web
+      }
+    };
+    requestNativePermissions();
+
     setStreak(getLocalStreak());
     const fetchMissions = async () => {
       try {

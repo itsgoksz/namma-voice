@@ -17,6 +17,17 @@ export default function ReportPage() {
 
   const takePhoto = async () => {
     try {
+      // Request camera permissions explicitly to trigger native prompts if needed
+      try {
+        const permissions = await Camera.requestPermissions();
+        if (permissions.camera === 'denied' || permissions.camera === 'prompt-with-rationale') {
+          console.warn("Camera permission denied");
+          return;
+        }
+      } catch (e) {
+        // May throw on unsupported platforms, which is fine to ignore
+      }
+
       const image = await Camera.getPhoto({
         quality: 50,
         allowEditing: false,
