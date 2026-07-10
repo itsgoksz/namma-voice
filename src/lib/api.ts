@@ -11,9 +11,13 @@ export const getCurrentUser = () => {
 // Wrapper around fetch
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   const defaultHeaders = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
     ...(options.headers || {})
   };
   return fetch(`${API_URL}${endpoint}`, {
+    cache: 'no-store', // Fixes iOS Safari aggressive caching
     ...options,
     headers: defaultHeaders
   });
