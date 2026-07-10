@@ -17,14 +17,7 @@ export default function ReportPage() {
 
   const takePhoto = async () => {
     try {
-      // 1. Get real location (triggers permission popup)
-      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-      setLocation({
-        lat: position.coords.latitude,
-        lng: position.coords.longitude
-      });
-
-      // 2. Open camera
+      // 1. Open camera FIRST (iOS Safari blocks camera if we await location first due to lost user gesture context)
       const image = await Camera.getPhoto({
         quality: 50,
         allowEditing: false,
@@ -34,8 +27,22 @@ export default function ReportPage() {
       if (image.base64String) {
         setPhoto(`data:image/jpeg;base64,${image.base64String}`);
       }
+
+      // 2. Get real location after photo is taken
+      try {
+        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+        setLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+      } catch (locErr) {
+        console.error("Location failed, falling back", locErr);
+        // Fallback to center of JP Nagar if location fails on Safari
+        setLocation({ lat: 12.9063, lng: 77.5857 });
+      }
+
     } catch (e) {
-      console.error("Failed to get location or photo", e);
+      console.error("Failed to get photo", e);
     }
   };
 
