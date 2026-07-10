@@ -13,11 +13,9 @@ export default function ReportPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
-  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
 
   const takePhoto = async () => {
     try {
-      // 1. Open camera FIRST (iOS Safari blocks camera if we await location first due to lost user gesture context)
       const image = await Camera.getPhoto({
         quality: 50,
         allowEditing: false,
@@ -27,28 +25,35 @@ export default function ReportPage() {
       if (image.base64String) {
         setPhoto(`data:image/jpeg;base64,${image.base64String}`);
       }
-
-      // 2. Get real location after photo is taken
-      try {
-        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-        setLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        });
-      } catch (locErr) {
-        console.error("Location failed, falling back", locErr);
-        // Fallback to center of JP Nagar if location fails on Safari
-        setLocation({ lat: 12.9063, lng: 77.5857 });
-      }
-
     } catch (e) {
       console.error("Failed to get photo", e);
     }
   };
 
+  const getSafariSafeLocation = (): Promise<{lat: number, lng: number}> => {
+    return new Promise((resolve) => {
+      // Use standard HTML5 Geolocation which is more reliable on iOS Safari than Capacitor's wrapper
+      if (!navigator.geolocation) {
+        resolve({ lat: 12.9063, lng: 77.5857 });
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (err) => {
+          console.error("Location error", err);
+          resolve({ lat: 12.9063, lng: 77.5857 });
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
+  };
+
   const handleSubmit = async () => {
-    if (!photo || !location) return;
+    if (!photo) return;
     setIsSubmitting(true);
+    
+    // Request location on Submit click (NEW user gesture for Safari!)
+    const finalLocation = await getSafariSafeLocation();
     
     const username = getCurrentUser();
 
@@ -58,8 +63,8 @@ export default function ReportPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username,
-          lat: location.lat,
-          lng: location.lng,
+          lat: finalLocation.lat,
+          lng: finalLocation.lng,
           image_base64: photo
         })
       });
