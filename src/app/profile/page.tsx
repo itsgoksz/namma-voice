@@ -5,12 +5,15 @@ import { motion } from "framer-motion";
 import { Award, Flame, MapPin, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch, getCurrentUser } from "@/lib/api";
+import { getLocalStreak } from "@/lib/streak";
 
 export default function ProfilePage() {
   const [user, setUser] = useState({ name: getCurrentUser(), level: 1, xp: 0, reports_count: 0 });
   const [loading, setLoading] = useState(true);
+  const [streak, setStreak] = useState(0);
 
   useEffect(() => {
+    setStreak(getLocalStreak());
     const fetchUser = async () => {
       try {
         const username = getCurrentUser();
@@ -97,7 +100,7 @@ export default function ProfilePage() {
         <div className="grid grid-cols-2 gap-4">
           <div className="glass-panel p-5 rounded-3xl border border-white/5 bg-[rgba(20,20,20,0.85)]">
             <Flame className="w-6 h-6 text-[#ff9f1c] mb-3" />
-            <p className="text-3xl font-black text-white">0</p>
+            <p className="text-3xl font-black text-white">{streak}</p>
             <p className="text-[10px] text-text-secondary font-bold uppercase tracking-widest mt-1">Day Streak</p>
           </div>
           <div className="glass-panel p-5 rounded-3xl border border-white/5 bg-[rgba(20,20,20,0.85)]">

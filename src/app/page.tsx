@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Navigation, Flame, Target, CheckCircle2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { getLocalStreak } from "@/lib/streak";
 
 const GarbageMap = dynamic(() => import("@/components/GarbageMap"), {
   ssr: false,
@@ -33,8 +34,10 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
 export default function Home() {
   const [closestMission, setClosestMission] = useState<{ id: number, lat: number, lng: number, distance: number } | null>(null);
   const [userLoc, setUserLoc] = useState<{lat: number, lng: number} | null>(null);
+  const [streak, setStreak] = useState(0);
 
   useEffect(() => {
+    setStreak(getLocalStreak());
     const fetchMissions = async () => {
       try {
         // Try to get user location
@@ -94,7 +97,7 @@ export default function Home() {
           className="bg-[rgba(20,20,20,0.85)] border border-white/10 px-3 py-1.5 rounded-full flex items-center shadow-lg backdrop-blur-sm"
         >
           <Flame className="w-4 h-4 text-[#ff9f1c] mr-1.5 fill-current" />
-          <span className="text-white font-bold text-sm">3 Day Streak</span>
+          <span className="text-white font-bold text-sm">{streak} Day Streak</span>
         </motion.div>
       </div>
 

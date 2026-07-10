@@ -131,7 +131,10 @@ export default function LeaderboardPage() {
                 </span>
               </div>
               <div className="flex items-center space-x-3">
-                <span className="font-black text-white">{user.xp} <span className="text-[10px] text-text-secondary uppercase">🌏 Points</span></span>
+                <div className="flex items-center space-x-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                  <span className="font-black text-white text-sm">{user.xp}</span>
+                  <span className="text-[10px] font-bold text-[#ff4d6d] uppercase tracking-wider">🌏 Points</span>
+                </div>
                 {rank < 4 ? <TrendingUp className="text-[#ff4d6d] w-4 h-4" /> : rank > 7 ? <TrendingDown className="text-text-secondary w-4 h-4" /> : <Minus className="text-white/30 w-4 h-4" />}
               </div>
             </div>
