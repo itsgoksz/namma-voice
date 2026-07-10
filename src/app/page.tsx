@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Navigation, Flame, Target, CheckCircle2, X, Info } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { getLocalStreak } from "@/lib/streak";
+import { getFastLocation } from "@/lib/location";
 
 const GarbageMap = dynamic(() => import("@/components/GarbageMap"), {
   ssr: false,
@@ -41,36 +42,24 @@ export default function Home() {
     setStreak(getLocalStreak());
     const fetchMissions = async () => {
       try {
-        // Try to get user location
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            setUserLoc({ lat, lng });
-
-            // Fetch live reports
-            const res = await apiFetch('/reports');
-            if (res.ok) {
-              const data = await res.json();
-              let closest = null;
-              let minDistance = Infinity;
-
-              data.forEach((report: any) => {
-                const dist = getDistance(lat, lng, report.pos[0], report.pos[1]);
-                if (dist < minDistance) {
-                  minDistance = dist;
-                  closest = { id: report.id, lat: report.pos[0], lng: report.pos[1], distance: dist };
-                }
-              });
-
-              if (closest && minDistance < 10000) { // Only show missions within 10km
-                setClosestMission(closest);
-              }
-            }
-          },
-          (err) => console.error("Location denied", err),
-          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
-        );
+        const res = await apiFetch('/reports');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        // Guarantee location within 1.5s max (cache -> GPS -> JP Nagar fallback)
+        const loc = await getFastLocation();
+        setUserLoc(loc);
+        
+        let closest = null;
+        let minDistance = Infinity;
+        data.forEach((report: any) => {
+          const dist = getDistance(loc.lat, loc.lng, report.pos[0], report.pos[1]);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closest = { id: report.id, lat: report.pos[0], lng: report.pos[1], distance: dist };
+          }
+        });
+        if (closest && minDistance < 10000) setClosestMission(closest);
       } catch (e) {
         console.error("Failed to load missions", e);
       }

@@ -99,3 +99,12 @@ pwa-camera-modal-instance {
 .custom-popup .leaflet-popup-content-wrapper {
   border-radius: 12px;
 }
+
+@keyframes twinkle {
+  0% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}

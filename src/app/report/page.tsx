@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { Geolocation } from "@capacitor/geolocation";
 import { apiFetch, getCurrentUser } from "@/lib/api";
+import { getFastLocation } from "@/lib/location";
 
 export default function ReportPage() {
   const router = useRouter();
@@ -30,22 +31,8 @@ export default function ReportPage() {
     }
   };
 
-  const getSafariSafeLocation = (): Promise<{lat: number, lng: number}> => {
-    return new Promise((resolve) => {
-      // Use standard HTML5 Geolocation which is more reliable on iOS Safari than Capacitor's wrapper
-      if (!navigator.geolocation) {
-        resolve({ lat: 12.9063, lng: 77.5857 });
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => {
-          console.error("Location error", err);
-          resolve({ lat: 12.9063, lng: 77.5857 });
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    });
+  const getSafariSafeLocation = async (): Promise<{lat: number, lng: number}> => {
+    return await getFastLocation();
   };
 
   const handleSubmit = async () => {

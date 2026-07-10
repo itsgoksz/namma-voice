@@ -6,6 +6,7 @@ import { Award, Flame, MapPin, Zap, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch, getCurrentUser } from "@/lib/api";
 import { getLocalStreak } from "@/lib/streak";
+import { getFastLocation } from "@/lib/location";
 
 export default function ProfilePage() {
   const [user, setUser] = useState({ name: getCurrentUser(), level: 1, xp: 0, reports_count: 0 });
@@ -17,21 +18,24 @@ export default function ProfilePage() {
   useEffect(() => {
     setStreak(getLocalStreak());
     
+    // Check cache first for instant load
+    const cachedLocName = localStorage.getItem('namma_loc_name');
+    if (cachedLocName) setLocationName(cachedLocName);
+
     // Fetch user location for dynamic header
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=16`);
-          const data = await res.json();
-          const loc = data.address?.neighbourhood || data.address?.suburb || data.address?.road || "Unknown Area";
-          setLocationName(loc);
-        } catch (e) {
-          setLocationName("Unknown Area");
-        }
-      },
-      () => setLocationName("Location Disabled"),
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
-    );
+    const updateLocation = async () => {
+      const loc = await getFastLocation();
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}&zoom=16`);
+        const data = await res.json();
+        const locName = data.address?.neighbourhood || data.address?.suburb || data.address?.road || "Unknown Area";
+        setLocationName(locName);
+        localStorage.setItem('namma_loc_name', locName);
+      } catch (e) {
+        if (!cachedLocName) setLocationName("Unknown Area");
+      }
+    };
+    updateLocation();
 
     const fetchUser = async () => {
       try {
