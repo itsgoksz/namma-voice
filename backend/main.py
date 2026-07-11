@@ -32,6 +32,7 @@ class DBReport(Base):
     lng = Column(Float)
     severity = Column(String, default="low")
     image_base64 = Column(String, nullable=True)
+    cleanup_image_base64 = Column(String, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
     supports = Column(Integer, default=0)
 
@@ -57,10 +58,15 @@ class UserResponse(BaseModel):
     level: int
     reports_count: int
 
+class CleanupCreate(BaseModel):
+    username: str
+    cleanup_image_base64: str
+
 class ReportCreate(BaseModel):
     username: str
     lat: float
     lng: float
+    severity: str = "low"
     image_base64: Optional[str] = None
 
 class ReportResponse(BaseModel):
@@ -69,6 +75,7 @@ class ReportResponse(BaseModel):
     reports: int
     severity: str
     image_base64: Optional[str] = None
+    cleanup_image_base64: Optional[str] = None
 
 class FeedResponse(BaseModel):
     id: int
@@ -76,8 +83,10 @@ class FeedResponse(BaseModel):
     lat: float
     lng: float
     image_base64: Optional[str] = None
+    cleanup_image_base64: Optional[str] = None
     timestamp: datetime
     supports: int
+    severity: str = "low"
 
 def get_db():
     db = SessionLocal()
@@ -126,7 +135,7 @@ def create_report(report: ReportCreate):
         username=report.username, 
         lat=report.lat, 
         lng=report.lng, 
-        severity="low",
+        severity=report.severity,
         image_base64=report.image_base64
     )
     db.add(db_report)
@@ -158,7 +167,8 @@ def get_reports():
             "pos": [r.lat, r.lng],
             "reports": 1,
             "severity": r.severity,
-            "image_base64": r.image_base64
+            "image_base64": r.image_base64,
+            "cleanup_image_base64": r.cleanup_image_base64
         })
     return result
 
@@ -176,8 +186,10 @@ def get_feed():
             "lat": r.lat,
             "lng": r.lng,
             "image_base64": r.image_base64,
+            "cleanup_image_base64": r.cleanup_image_base64,
             "timestamp": r.timestamp,
-            "supports": r.supports or 0
+            "supports": r.supports or 0,
+            "severity": r.severity
         })
     return result
 
@@ -190,3 +202,40 @@ def support_report(report_id: int):
         db.commit()
     db.close()
     return {"status": "success"}
+
+@app.post("/reports/{report_id}/cleanup")
+def cleanup_report(report_id: int, cleanup: CleanupCreate):
+    db = SessionLocal()
+    db_report = db.query(DBReport).filter(DBReport.id == report_id).first()
+    if db_report:
+        db_report.cleanup_image_base64 = cleanup.cleanup_image_base64
+        
+        # Give user XP for cleanup
+        db_user = db.query(DBUser).filter(DBUser.name == cleanup.username).first()
+        if not db_user:
+            db_user = DBUser(name=cleanup.username, xp=0, level=1, reports_count=0)
+            db.add(db_user)
+        
+        db_user.xp += 20
+        db_user.level = (db_user.xp // 50) + 1
+        
+        db.commit()
+    db.close()
+    return {"status": "success"}
+
+class XpClaim(BaseModel):
+    username: str
+    amount: int
+
+@app.post("/add_xp")
+def add_xp(claim: XpClaim):
+    db = SessionLocal()
+    db_user = db.query(DBUser).filter(DBUser.name == claim.username).first()
+    if not db_user:
+        db_user = DBUser(name=claim.username, xp=0, level=1, reports_count=0)
+        db.add(db_user)
+    db_user.xp += claim.amount
+    db_user.level = (db_user.xp // 50) + 1
+    db.commit()
+    db.close()
+    return {"status": "success", "new_xp": db_user.xp}

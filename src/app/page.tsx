@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Navigation, Flame, Target, CheckCircle2, X, Info } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, getCurrentUser } from "@/lib/api";
 import { getLocalStreak } from "@/lib/streak";
 import { getFastLocation } from "@/lib/location";
 import { Geolocation } from "@capacitor/geolocation";
@@ -38,12 +38,23 @@ export default function Home() {
   const [userLoc, setUserLoc] = useState<{lat: number, lng: number} | null>(null);
   const [streak, setStreak] = useState(0);
   const [isMissionDismissed, setIsMissionDismissed] = useState(false);
+  const [objectives, setObjectives] = useState({ hotspot: false, sunset: false, newArea: false });
 
   useEffect(() => {
+    let watchId: string;
     // Proactively request native permissions (iOS/Android will show prompt, web ignores or handles gracefully)
     const requestNativePermissions = async () => {
       try {
         await Geolocation.requestPermissions();
+        watchId = await Geolocation.watchPosition({
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }, (pos, err) => {
+          if (pos) {
+            setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          }
+        });
       } catch (e) {
         // Safe to ignore on Web
       }
@@ -71,11 +82,45 @@ export default function Home() {
           }
         });
         if (closest && minDistance < 10000) setClosestMission(closest);
+        
+        const feedRes = await apiFetch('/feed');
+        if (feedRes.ok) {
+          const feed = await feedRes.json();
+          const myReports = feed.filter((r: any) => r.username === getCurrentUser());
+          const newObjectives = {
+            hotspot: myReports.length > 0,
+            sunset: myReports.some((r: any) => {
+              const d = new Date(r.timestamp.endsWith('Z') ? r.timestamp : r.timestamp + 'Z');
+              return d.getHours() >= 18 || d.getHours() < 6;
+            }),
+            newArea: myReports.length > 1
+          };
+          setObjectives(newObjectives);
+          
+          if (newObjectives.hotspot && newObjectives.sunset && newObjectives.newArea) {
+            const isClaimed = localStorage.getItem('namma_weekly_claimed');
+            if (!isClaimed) {
+              await apiFetch('/add_xp', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: getCurrentUser(), amount: 50 })
+              });
+              localStorage.setItem('namma_weekly_claimed', 'true');
+              alert("🎉 Weekly Objectives Complete! +50 Eco XP Earned!");
+            }
+          }
+        }
       } catch (e) {
         console.error("Failed to load missions", e);
       }
     };
     fetchMissions();
+
+    return () => {
+      if (watchId) {
+        Geolocation.clearWatch({ id: watchId });
+      }
+    };
   }, []);
 
   const openNavigation = () => {
@@ -105,26 +150,26 @@ export default function Home() {
       {/* Daily Checklist */}
       <motion.div 
         initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-        className="glass-panel p-4 rounded-2xl border border-[#10b981]/20 bg-black z-10 w-full shrink-0"
+        className="p-4 rounded-2xl border border-[#10b981]/20 bg-[#06140e] backdrop-blur-xl z-10 w-full shrink-0 shadow-lg"
       >
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-[#d4af37] font-bold text-sm uppercase tracking-widest flex items-center">
-            <Target className="w-4 h-4 mr-2 text-zinc-400" /> Daily Objectives
+            <Target className="w-4 h-4 mr-2 text-zinc-400" /> Weekly Objectives
           </h3>
           <span className="text-[#d4af37] font-black text-xs">+50 Eco XP</span>
         </div>
         <div className="space-y-2">
-          <div className="flex items-center space-x-3 opacity-100">
-            <CheckCircle2 className="w-5 h-5 text-zinc-400" />
-            <span className="text-sm font-semibold text-[#ff4d6d] line-through decoration-[#ff4d6d]/50">Report 1 hotspot</span>
+          <div className={`flex items-center space-x-3 ${objectives.hotspot ? 'opacity-100' : 'opacity-50'}`}>
+            {objectives.hotspot ? <CheckCircle2 className="w-5 h-5 text-zinc-400" /> : <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/20" />}
+            <span className={`text-sm ${objectives.hotspot ? 'font-semibold text-[#ff4d6d] line-through decoration-[#ff4d6d]/50' : 'font-medium text-[#ff4d6d]'}`}>Report 1 hotspot</span>
           </div>
-          <div className="flex items-center space-x-3 opacity-50">
-            <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/20" />
-            <span className="text-sm font-medium text-[#ff4d6d]">Report after sunset</span>
+          <div className={`flex items-center space-x-3 ${objectives.sunset ? 'opacity-100' : 'opacity-50'}`}>
+            {objectives.sunset ? <CheckCircle2 className="w-5 h-5 text-zinc-400" /> : <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/20" />}
+            <span className={`text-sm ${objectives.sunset ? 'font-semibold text-[#ff4d6d] line-through decoration-[#ff4d6d]/50' : 'font-medium text-[#ff4d6d]'}`}>Report after sunset</span>
           </div>
-          <div className="flex items-center space-x-3 opacity-50">
-            <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/20" />
-            <span className="text-sm font-medium text-[#ff4d6d]">Visit a new area</span>
+          <div className={`flex items-center space-x-3 ${objectives.newArea ? 'opacity-100' : 'opacity-50'}`}>
+            {objectives.newArea ? <CheckCircle2 className="w-5 h-5 text-zinc-400" /> : <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/20" />}
+            <span className={`text-sm ${objectives.newArea ? 'font-semibold text-[#ff4d6d] line-through decoration-[#ff4d6d]/50' : 'font-medium text-[#ff4d6d]'}`}>Visit a new area</span>
           </div>
         </div>
       </motion.div>
@@ -134,7 +179,7 @@ export default function Home() {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.2 }}
-        className="w-full flex-1 relative z-0 rounded-2xl overflow-hidden shadow-2xl"
+        className="w-full flex-1 relative z-0 rounded-2xl overflow-hidden shadow-[0_15px_50px_-12px_rgba(0,0,0,1)] ring-1 ring-black/5"
       >
         <GarbageMap />
 
@@ -168,7 +213,7 @@ export default function Home() {
                 </div>
                 <button 
                   onClick={openNavigation}
-                  className="bg-white text-[#10b981] font-black py-3 px-6 rounded-xl flex items-center space-x-2 active:scale-95 transition-transform shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                  className="bg-[#f14f4f] text-white font-black py-3 px-6 rounded-xl flex items-center space-x-2 active:scale-95 transition-transform shadow-[0_0_20px_rgba(241,79,79,0.3)]"
                 >
                   <Navigation className="w-5 h-5" />
                   <span>Navigate</span>
