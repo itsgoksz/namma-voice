@@ -117,13 +117,20 @@ export default function Home() {
           if (newObjectives.hotspot && newObjectives.sunset && newObjectives.newArea) {
             const isClaimed = localStorage.getItem('namma_weekly_claimed');
             if (!isClaimed) {
-              await apiFetch('/add_xp', {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: getCurrentUser(), amount: 50 })
-              });
+              // Set the flag synchronously *before* the async call to prevent duplicate triggers
               localStorage.setItem('namma_weekly_claimed', 'true');
-              alert("🎉 Weekly Objectives Complete! +50 Eco XP Earned!");
+              
+              try {
+                await apiFetch('/add_xp', {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ username: getCurrentUser(), amount: 50 })
+                });
+                alert("🎉 Weekly Objectives Complete! +50 Eco XP Earned!");
+              } catch (err) {
+                // Revert flag if network fails
+                localStorage.removeItem('namma_weekly_claimed');
+              }
             }
           }
         }
