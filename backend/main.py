@@ -38,6 +38,17 @@ class DBReport(Base):
 
 Base.metadata.create_all(bind=engine)
 
+import sqlite3
+try:
+    db_path = SQLALCHEMY_DATABASE_URL.replace("sqlite:///", "")
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute("ALTER TABLE reports ADD COLUMN cleanup_image_base64 VARCHAR")
+    conn.commit()
+    conn.close()
+except Exception:
+    pass
+
 app = FastAPI()
 
 app.add_middleware(
