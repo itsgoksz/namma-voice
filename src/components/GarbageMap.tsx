@@ -8,7 +8,7 @@ import { apiFetch } from "@/lib/api";
 import { LatLngBoundsExpression } from "leaflet";
 
 // Central JP Nagar approximate center
-const center: [number, number] = [12.9063, 77.5857];
+const center: [number, number] = [12.9000, 77.5850];
 
 // JP Nagar Boundaries (Phases 1-9)
 const jpBounds: LatLngBoundsExpression = [
@@ -53,7 +53,7 @@ export default function GarbageMap() {
         maxBounds={jpBounds}
         maxBoundsViscosity={1.0}
         scrollWheelZoom={true}
-        className="w-full h-full rounded-2xl border border-white/5 shadow-2xl"
+        className="w-full h-full rounded-2xl border border-[#455d49] shadow-2xl"
         zoomControl={false}
         attributionControl={false}
       >
@@ -82,7 +82,7 @@ export default function GarbageMap() {
                   {spot.image_base64 && (
                     <img src={spot.image_base64} alt="Hotspot" className="w-full h-24 object-cover rounded-lg mb-2" />
                   )}
-                  <span className="text-[#ff4d6d] text-xl">{spot.reports}</span>
+                  <span className="text-[#455d49] text-xl">{spot.reports}</span>
                   <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">Active Reports</span>
                 </div>
               </Popup>
@@ -91,9 +91,9 @@ export default function GarbageMap() {
         })}
       </MapContainer>
 
-      <div className="absolute bottom-6 left-4 z-[400] glass-panel p-4 bg-[rgba(10,10,10,0.95)] shadow-[0_0_15px_rgba(0,0,0,0.8)] border border-white/10 rounded-2xl">
+      <div className="absolute bottom-6 left-4 z-[400] glass-panel p-4 bg-[rgba(13,27,10,0.95)] shadow-[0_0_15px_rgba(0,0,0,0.8)] border border-[#455d49] rounded-2xl">
         <h3 className="text-white font-bold text-lg leading-tight">J.P. Nagar</h3>
-        {/* <p className="text-text-secondary text-xs mb-1 font-semibold">Phases 1-9 locked</p> */}
+        {/* <p className="text-[#455d49] text-xs mb-1 font-semibold">Phases 1-9 locked</p> */}
         <p className="text-[#ff4d6d] font-black text-sm">{hotspots.reduce((acc, s) => acc + s.reports, 0)} reports live</p>
       </div>
     </div>

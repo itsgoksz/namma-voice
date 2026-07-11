@@ -20,11 +20,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} min-h-screen pb-24 text-foreground relative bg-black`}>
+      <body className={`${inter.className} h-[100dvh] w-full overflow-hidden text-white relative bg-[#0d1b0a]`}>
         <PWACameraSetup />
         <LoginOverlay />
         <Starfield />
-        <main className="max-w-md mx-auto min-h-screen relative z-10 pt-6">
+        <main className="max-w-md mx-auto h-full w-full relative z-10 pt-6">
           {children}
         </main>
         <BottomNav />

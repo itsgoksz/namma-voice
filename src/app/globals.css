@@ -3,9 +3,9 @@
 :root {
   --background: #000000;
   --foreground: #ffffff;
-  --coral: #ff4d6d;
-  --coral-dim: rgba(255, 77, 109, 0.2);
-  --card-bg: rgba(20, 20, 20, 0.85);
+  --coral: #455d49;
+  --coral-dim: rgba(69, 93, 73, 0.2);
+  --card-bg: rgba(21, 57, 57, 0.85);
   --card-border: rgba(255, 255, 255, 0.08);
   --text-secondary: #a1a1aa;
 }
