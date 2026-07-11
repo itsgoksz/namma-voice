@@ -18,7 +18,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 z-[9999] glass-nav border border-[#455d49] rounded-[2rem] max-w-md mx-auto h-20 px-2 shadow-2xl">
+    <nav className="fixed bottom-4 left-4 right-4 z-[9999] bg-[#10b981]/10 backdrop-blur-2xl border border-[#10b981]/20 rounded-[2rem] max-w-md mx-auto h-20 px-2 shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
       <div className="flex items-center justify-around h-full relative">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -30,9 +30,9 @@ export default function BottomNav() {
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="bg-[#455d49] rounded-full p-4 flex items-center justify-center shadow-[0_0_20px_rgba(69,93,73,0.5)] border-4 border-[#000000]"
+                  className="bg-white rounded-full p-4 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.5)] border-4 border-[#000000]"
                 >
-                  <Icon className="w-8 h-8 text-white" strokeWidth={2.5} />
+                  <Icon className="w-8 h-8 text-[#10b981]" strokeWidth={2.5} />
                 </motion.div>
               </Link>
             );
@@ -49,18 +49,18 @@ export default function BottomNav() {
                 whileTap={{ scale: 0.9 }}
                 className={cn(
                   "flex flex-col items-center",
-                  isActive ? "text-[#455d49]" : "text-[#71717a]"
+                  isActive ? "text-zinc-400" : "text-[#71717a]"
                 )}
               >
                 <Icon
-                  className={cn("w-5 h-5", isActive ? "stroke-[#455d49]" : "")}
+                  className={cn("w-5 h-5", isActive ? "stroke-[#10b981]" : "")}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
                 <span className="text-[9px] font-black mt-1.5 tracking-wider">{item.name}</span>
                 {isActive && (
                   <motion.div
                     layoutId="nav-indicator"
-                    className="absolute -bottom-2 w-1.5 h-1.5 bg-[#455d49] rounded-full"
+                    className="absolute -bottom-2 w-1.5 h-1.5 bg-white rounded-full"
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                   />
                 )}

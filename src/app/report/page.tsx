@@ -10,7 +10,7 @@ import { getFastLocation } from "@/lib/location";
 import { cn } from "@/lib/utils";
 
 const SEVERITIES = [
-  { value: 1, label: "Light", desc: "Small litter", icon: Info, color: "text-[#455d49]", bg: "bg-[#455d49]", border: "border-[#455d49]" },
+  { value: 1, label: "Light", desc: "Small litter", icon: Info, color: "text-zinc-400", bg: "bg-[#10b981]", border: "border-[#10b981]/20" },
   { value: 2, label: "Moderate", desc: "Noticeable pile", icon: AlertTriangle, color: "text-[#d4af37]", bg: "bg-[#d4af37]", border: "border-[#d4af37]" },
   { value: 3, label: "Severe", desc: "Large dump", icon: Flame, color: "text-[#ff9f1c]", bg: "bg-[#ff9f1c]", border: "border-[#ff9f1c]" },
   { value: 4, label: "Critical", desc: "Biohazard", icon: AlertOctagon, color: "text-[#ff4d6d]", bg: "bg-[#ff4d6d]", border: "border-[#ff4d6d]" }
@@ -81,10 +81,10 @@ export default function ReportPage() {
     return (
       <div className="h-[80vh] flex flex-col items-center justify-center space-y-4">
         <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring" }}>
-          <CheckCircle2 className="w-24 h-24 text-[#455d49]" />
+          <CheckCircle2 className="w-24 h-24 text-zinc-400" />
         </motion.div>
         <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-3xl font-black text-white">
-          +10 🌏 Points Earned!
+          <span className="text-[#d4af37]">+10 Eco XP Earned!</span>
         </motion.h1>
       </div>
     );
@@ -102,7 +102,7 @@ export default function ReportPage() {
         onClick={!photo ? takePhoto : undefined}
         className={cn(
           "glass-panel rounded-2xl flex flex-col items-center justify-center border transition-all overflow-hidden relative",
-          photo ? "border-white/10 h-48 shrink-0" : "border-[#455d49] hover:border-[#455d49]/50 cursor-pointer flex-1 bg-[rgba(21,57,57,0.85)] group"
+          photo ? "border-[#10b981]/20 h-48 shrink-0" : "border-[#10b981]/20 hover:border-[#10b981]/20 cursor-pointer flex-1 bg-[#10b981]/5 group"
         )}
       >
         {photo ? (
@@ -110,15 +110,15 @@ export default function ReportPage() {
             <img src={photo} alt="Captured" className="w-full h-full object-cover" />
             <button 
               onClick={(e) => { e.stopPropagation(); takePhoto(); }}
-              className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-xs font-bold border border-[#455d49]"
+              className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-xs font-bold border border-[#10b981]/20"
             >
               Retake
             </button>
           </>
         ) : (
           <>
-            <div className="bg-[#455d49]/30 p-6 rounded-full mb-4 group-hover:bg-[#455d49]/10 transition-colors">
-              <CameraIcon className="w-12 h-12 text-[#455d49]" />
+            <div className="bg-[#10b981]/5 p-6 rounded-full mb-4 group-hover:bg-[#10b981]/5 transition-colors">
+              <CameraIcon className="w-12 h-12 text-zinc-400" />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Take Photo</h3>
           </>
@@ -146,12 +146,12 @@ export default function ReportPage() {
                       "p-3 rounded-2xl border flex flex-col items-start transition-all text-left",
                       isSelected 
                         ? `${s.bg}/20 ${s.border}` 
-                        : "bg-[rgba(21,57,57,0.5)] border-transparent hover:border-[#455d49]"
+                        : "bg-[rgba(21,57,57,0.5)] border-transparent hover:border-[#10b981]/20"
                     )}
                   >
-                    <Icon className={cn("w-6 h-6 mb-2", isSelected ? s.color : "text-[#455d49]")} />
-                    <span className={cn("font-black text-sm", isSelected ? "text-white" : "text-[#455d49]")}>{s.label}</span>
-                    <span className="text-[10px] text-[#455d49] font-semibold">{s.desc}</span>
+                    <Icon className={cn("w-6 h-6 mb-2", isSelected ? s.color : "text-zinc-400")} />
+                    <span className={cn("font-black text-sm", isSelected ? "text-white" : "text-zinc-400")}>{s.label}</span>
+                    <span className="text-[10px] text-zinc-400 font-semibold">{s.desc}</span>
                   </motion.button>
                 );
               })}
@@ -170,7 +170,7 @@ export default function ReportPage() {
           "w-full text-white font-bold py-4 rounded-xl flex items-center justify-center space-x-2 text-lg mb-4 disabled:opacity-50 transition-all shadow-xl",
           selectedSeverityObj 
             ? `${selectedSeverityObj.bg}` 
-            : "bg-[#153939] border border-[#455d49]"
+            : "bg-[#153939] border border-[#10b981]/20"
         )}
       >
         {isSubmitting ? (

@@ -44,7 +44,7 @@ export default function Starfield() {
         return (
           <div
             key={el.id}
-            className="absolute text-[#455d49]"
+            className="absolute text-white/20"
             style={{
               left: `${el.x}vw`,
               top: `${el.y}vh`,

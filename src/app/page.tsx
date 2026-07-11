@@ -12,10 +12,10 @@ import { Geolocation } from "@capacitor/geolocation";
 const GarbageMap = dynamic(() => import("@/components/GarbageMap"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-[#0a0a0a] rounded-2xl border border-[#455d49]">
+    <div className="w-full h-full flex items-center justify-center bg-[#000000] rounded-2xl border border-[#10b981]/20">
       <div className="flex flex-col items-center">
-        <MapPin className="text-[#455d49] w-8 h-8 animate-bounce mb-4" />
-        <p className="text-[#455d49] font-bold uppercase tracking-widest text-xs">Loading Map Data...</p>
+        <MapPin className="text-zinc-400 w-8 h-8 animate-bounce mb-4" />
+        <p className="text-zinc-400 font-bold uppercase tracking-widest text-xs">Loading Map Data...</p>
       </div>
     </div>
   ),
@@ -90,12 +90,12 @@ export default function Home() {
       <div className="flex justify-between items-start z-10">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold text-white tracking-tight">Discover</h1>
-          <p className="text-[#455d49] text-sm font-semibold mt-1">Today's Missions</p>
+          <p className="text-zinc-400 text-sm font-semibold mt-1">Today's Missions</p>
         </motion.div>
         <motion.div 
           initial={{ opacity: 0, scale: 0.8 }} 
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-[rgba(21,57,57,0.85)] border border-[#455d49] px-3 py-1.5 rounded-full flex items-center shadow-lg backdrop-blur-sm"
+          className="bg-[#10b981]/10 border border-[#10b981]/20 px-3 py-1.5 rounded-full flex items-center shadow-lg backdrop-blur-sm"
         >
           <Flame className="w-4 h-4 text-[#ff9f1c] mr-1.5 fill-current" />
           <span className="text-white font-bold text-sm">{streak} Day Streak</span>
@@ -105,25 +105,25 @@ export default function Home() {
       {/* Daily Checklist */}
       <motion.div 
         initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-        className="glass-panel p-4 rounded-2xl border border-[#455d49] bg-black z-10 w-full shrink-0"
+        className="glass-panel p-4 rounded-2xl border border-[#10b981]/20 bg-black z-10 w-full shrink-0"
       >
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-[#d4af37] font-bold text-sm uppercase tracking-widest flex items-center">
-            <Target className="w-4 h-4 mr-2 text-[#455d49]" /> Daily Objectives
+            <Target className="w-4 h-4 mr-2 text-zinc-400" /> Daily Objectives
           </h3>
-          <span className="text-[#455d49] font-black text-xs">+50 🌏 Points</span>
+          <span className="text-[#d4af37] font-black text-xs">+50 Eco XP</span>
         </div>
         <div className="space-y-2">
           <div className="flex items-center space-x-3 opacity-100">
-            <CheckCircle2 className="w-5 h-5 text-[#455d49]" />
+            <CheckCircle2 className="w-5 h-5 text-zinc-400" />
             <span className="text-sm font-semibold text-[#ff4d6d] line-through decoration-[#ff4d6d]/50">Report 1 hotspot</span>
           </div>
           <div className="flex items-center space-x-3 opacity-50">
-            <div className="w-5 h-5 rounded-full border-2 border-[#455d49]" />
+            <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/20" />
             <span className="text-sm font-medium text-[#ff4d6d]">Report after sunset</span>
           </div>
           <div className="flex items-center space-x-3 opacity-50">
-            <div className="w-5 h-5 rounded-full border-2 border-[#455d49]" />
+            <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/20" />
             <span className="text-sm font-medium text-[#ff4d6d]">Visit a new area</span>
           </div>
         </div>
@@ -145,11 +145,11 @@ export default function Home() {
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
-              className="absolute bottom-4 left-4 right-4 z-[9999] glass-panel border border-[#455d49]/50 bg-[#0d1b0a]/90 backdrop-blur-xl rounded-3xl p-4 shadow-[0_0_30px_rgba(69,93,73,0.3)]"
+              className="absolute bottom-4 left-4 right-4 z-[9999] glass-panel border border-[#10b981]/20 bg-[#000000]/90 backdrop-blur-xl rounded-3xl p-4 shadow-none"
             >
               <button 
                 onClick={() => setIsMissionDismissed(true)}
-                className="absolute top-4 right-4 text-[#455d49] hover:text-white transition-colors"
+                className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -164,19 +164,19 @@ export default function Home() {
                      closestMission.severity === 3 || closestMission.severity === 'medium' ? 'Severe Garbage Dump' : 
                      closestMission.severity === 2 ? 'Moderate Trash Pile' : 'Overflowing Garbage'}
                   </h3>
-                  <p className="text-[#455d49] text-sm font-semibold">{closestMission.distance}m away</p>
+                  <p className="text-zinc-400 text-sm font-semibold">{closestMission.distance}m away</p>
                 </div>
                 <button 
                   onClick={openNavigation}
-                  className="bg-[#10b981] text-white font-bold py-3 px-6 rounded-xl flex items-center space-x-2 active:scale-95 transition-transform shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                  className="bg-white text-[#10b981] font-black py-3 px-6 rounded-xl flex items-center space-x-2 active:scale-95 transition-transform shadow-[0_0_20px_rgba(16,185,129,0.3)]"
                 >
                   <Navigation className="w-5 h-5" />
                   <span>Navigate</span>
                 </button>
               </div>
-              <div className="bg-[#455d49]/30 p-2.5 rounded-xl flex items-center justify-between border border-[#455d49]">
+              <div className="bg-[#10b981]/5 p-2.5 rounded-xl flex items-center justify-between border border-[#10b981]/20">
                  <span className="text-white/60 text-xs font-bold uppercase tracking-wider">Completion Reward</span>
-                 <span className="text-[#455d49] text-sm font-black">+20 🌏 Points</span>
+                 <span className="text-[#d4af37] text-sm font-black">+20 Eco XP</span>
               </div>
             </motion.div>
           )}
@@ -189,7 +189,7 @@ export default function Home() {
             >
               <button 
                 onClick={() => setIsMissionDismissed(false)}
-                className="w-12 h-12 bg-[#ff4d6d] rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,77,109,0.5)] border border-[#455d49] active:scale-95 transition-transform"
+                className="w-12 h-12 bg-[#ff4d6d] rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,77,109,0.5)] border border-[#10b981]/20 active:scale-95 transition-transform"
               >
                 <Info className="w-6 h-6 text-white" />
               </button>

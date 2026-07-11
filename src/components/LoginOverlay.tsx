@@ -48,7 +48,7 @@ export default function LoginOverlay() {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 1.05 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
-          className="fixed inset-0 z-[10000] bg-[#0d1b0a] flex flex-col items-center justify-center p-6"
+          className="fixed inset-0 z-[10000] bg-[#000000] flex flex-col items-center justify-center p-6"
         >
           {/* Background Stars (simple CSS) */}
           <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
@@ -73,13 +73,13 @@ export default function LoginOverlay() {
             transition={{ delay: 0.2 }}
             className="z-10 w-full max-w-sm flex flex-col items-center text-center space-y-8"
           >
-            <div className="bg-[#455d49]/10 p-5 rounded-full border border-[#455d49]/20 mb-4 shadow-[0_0_30px_rgba(69,93,73,0.2)]">
-              <Leaf className="w-12 h-12 text-[#455d49]" />
+            <div className="bg-[#10b981]/5 p-5 rounded-full border border-[#10b981]/20 mb-4 shadow-none">
+              <Leaf className="w-12 h-12 text-zinc-400" />
             </div>
             
             <div className="space-y-2">
               <h1 className="text-4xl font-black text-white tracking-tight">Namma Voice</h1>
-              <p className="text-[#455d49] font-medium">Keep your streets clean. Earn 🌏 Points.</p>
+              <p className="text-zinc-400 font-medium">Keep your streets clean. Earn Eco XP.</p>
             </div>
 
             <form onSubmit={handleLogin} className="w-full space-y-4 mt-8">
@@ -89,7 +89,7 @@ export default function LoginOverlay() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter your name"
-                  className="w-full bg-[#455d49]/30 border border-[#455d49] rounded-2xl px-6 py-4 text-white placeholder:text-[#455d49] focus:outline-none focus:border-[#455d49] focus:bg-[#455d49]/30 transition-all font-bold text-center text-lg"
+                  className="w-full bg-[#10b981]/5 border border-[#10b981]/20 rounded-2xl px-6 py-4 text-white placeholder:text-zinc-400 focus:outline-none focus:border-[#10b981]/20 focus:bg-[#10b981]/5 transition-all font-bold text-center text-lg"
                   required
                 />
               </div>
@@ -98,7 +98,7 @@ export default function LoginOverlay() {
                 whileTap={{ scale: 0.95 }}
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#455d49] text-white font-black py-4 rounded-2xl shadow-[0_0_20px_rgba(69,93,73,0.4)] flex items-center justify-center space-x-2 text-lg disabled:opacity-50"
+                className="w-full bg-white text-[#10b981] font-black py-4 rounded-2xl shadow-none flex items-center justify-center space-x-2 text-lg disabled:opacity-50"
               >
                 {isLoading ? (
                   <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin" />

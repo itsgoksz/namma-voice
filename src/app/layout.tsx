@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} h-[100dvh] w-full overflow-hidden text-white relative bg-[#0d1b0a]`}>
+      <body className={`${inter.className} h-[100dvh] w-full overflow-hidden text-white relative bg-black`}>
         <PWACameraSetup />
         <LoginOverlay />
         <Starfield />

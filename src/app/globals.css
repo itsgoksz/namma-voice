@@ -1,12 +1,13 @@
 @import "tailwindcss";
+/* Force CSS reload 3 */
 
 :root {
-  --background: #000000;
+  --background: #080808;
   --foreground: #ffffff;
-  --coral: #455d49;
-  --coral-dim: rgba(69, 93, 73, 0.2);
-  --card-bg: rgba(21, 57, 57, 0.85);
-  --card-border: rgba(255, 255, 255, 0.08);
+  --coral: #10b981;
+  --coral-dim: rgba(16, 185, 129, 0.2);
+  --card-bg: rgba(16, 185, 129, 0.1);
+  --card-border: rgba(255, 255, 255, 0.1);
   --text-secondary: #a1a1aa;
 }
 
@@ -92,7 +93,7 @@ pwa-camera-modal-instance {
 /* Custom Black Leaflet Popup */
 .custom-popup .leaflet-popup-content-wrapper,
 .custom-popup .leaflet-popup-tip {
-  background: #0a0a0a !important;
+  background: #000000 !important;
   color: white !important;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
