@@ -38,17 +38,19 @@ class DBReport(Base):
 
 Base.metadata.create_all(bind=engine)
 
-import sqlite3
-try:
+def auto_migrate():
     db_path = SQLALCHEMY_DATABASE_URL.replace("sqlite:///", "")
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("ALTER TABLE reports ADD COLUMN cleanup_image_base64 VARCHAR")
-    conn.commit()
-    conn.close()
-except Exception:
-    pass
+    try:
+        import sqlite3
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("ALTER TABLE reports ADD COLUMN cleanup_image_base64 VARCHAR")
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
 
+auto_migrate()
 app = FastAPI()
 
 app.add_middleware(
