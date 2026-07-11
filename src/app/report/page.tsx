@@ -62,7 +62,7 @@ export default function ReportPage() {
           lat: finalLocation.lat,
           lng: finalLocation.lng,
           image_base64: photo,
-          severity: severity
+          severity: String(severity)
         })
       });
 

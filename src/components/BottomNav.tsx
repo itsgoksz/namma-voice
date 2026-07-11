@@ -18,7 +18,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 z-[9999] bg-[#10b981]/10 backdrop-blur-2xl border border-[#10b981]/20 rounded-[2rem] max-w-md mx-auto h-20 px-2 shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
+    <nav className="fixed bottom-4 left-4 right-4 z-[9999] bg-[#05110b]/[0.87] backdrop-blur-2xl border border-[#10b981]/20 rounded-[2rem] max-w-md mx-auto h-20 px-2 shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
       <div className="flex items-center justify-around h-full relative">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -30,9 +30,9 @@ export default function BottomNav() {
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="bg-white rounded-full p-4 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.5)] border-4 border-[#000000]"
+                  className="bg-[#f14f4f] rounded-full p-4 flex items-center justify-center shadow-[0_0_20px_rgba(241,79,79,0.5)] border-4 border-[#000000]"
                 >
-                  <Icon className="w-8 h-8 text-[#10b981]" strokeWidth={2.5} />
+                  <Icon className="w-8 h-8 text-white" strokeWidth={2.5} />
                 </motion.div>
               </Link>
             );

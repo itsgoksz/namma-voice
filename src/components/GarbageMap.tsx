@@ -45,7 +45,7 @@ export default function GarbageMap() {
   }, []);
 
   return (
-    <div className="w-full h-full relative z-0">
+    <div className="w-full h-full relative z-0 bg-black">
       <MapContainer
         center={center}
         zoom={14}
@@ -53,7 +53,7 @@ export default function GarbageMap() {
         maxBounds={jpBounds}
         maxBoundsViscosity={1.0}
         scrollWheelZoom={true}
-        className="w-full h-full rounded-2xl border border-[#10b981]/20 shadow-2xl"
+        className="w-full h-full bg-transparent"
         zoomControl={false}
         attributionControl={false}
       >
@@ -96,6 +96,9 @@ export default function GarbageMap() {
         {/* <p className="text-zinc-400 text-xs mb-1 font-semibold">Phases 1-9 locked</p> */}
         <p className="text-[#ff4d6d] font-black text-sm">{hotspots.reduce((acc, s) => acc + s.reports, 0)} reports live</p>
       </div>
+
+      {/* Border Overlay perfectly overlaying the map */}
+      <div className="absolute inset-0 z-[999] pointer-events-none rounded-2xl border border-white/20" />
     </div>
   );
 }

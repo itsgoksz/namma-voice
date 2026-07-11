@@ -2,17 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { apiFetch } from "@/lib/api";
-import { MapPin, Clock, Megaphone } from "lucide-react";
+import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import { apiFetch, getCurrentUser } from "@/lib/api";
+import { Camera as CameraIcon, MapPin, Clock, Megaphone, Info, AlertTriangle, Flame, AlertOctagon } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const SEVERITIES = [
+  { value: '1', label: "Light", color: "text-zinc-400" },
+  { value: '2', label: "Moderate", color: "text-[#d4af37]" },
+  { value: '3', label: "Severe", color: "text-[#ff9f1c]" },
+  { value: '4', label: "Critical", color: "text-[#ff4d6d]" }
+];
 
 interface FeedItem {
   id: number;
   username: string;
   lat: number;
   lng: number;
-  image_base64: string | null;
+  image_base64?: string;
+  cleanup_image_base64?: string;
   timestamp: string;
   supports: number;
+  severity?: string;
 }
 const pendingRequests: Record<string, Promise<string> | undefined> = {};
 
@@ -65,8 +76,15 @@ const LocationTag = ({ lat, lng }: { lat: number, lng: number }) => {
 export default function FeedPage() {
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCleaningUp, setIsCleaningUp] = useState<number | null>(null);
+  const [supportedPosts, setSupportedPosts] = useState<Set<number>>(new Set());
 
   useEffect(() => {
+    const supportedStr = localStorage.getItem('namma_supported_posts') || '[]';
+    try {
+      setSupportedPosts(new Set(JSON.parse(supportedStr)));
+    } catch (e) {}
+    
     const fetchFeed = async () => {
       try {
         const res = await apiFetch('/feed');
@@ -86,24 +104,71 @@ export default function FeedPage() {
   }, []);
 
   const handleSupport = async (id: number) => {
-    // Check if already supported locally
-    const supportedStr = localStorage.getItem('namma_supported_posts') || '[]';
-    const supported = JSON.parse(supportedStr);
-    if (supported.includes(id)) return;
-    
-    // Optimistic update
-    setFeed(prev => prev.map(post => 
-      post.id === id ? { ...post, supports: post.supports + 1 } : post
-    ));
-    
-    // Mark as supported
-    supported.push(id);
-    localStorage.setItem('namma_supported_posts', JSON.stringify(supported));
-
+    if (supportedPosts.has(id)) return;
     try {
+      setSupportedPosts(prev => {
+        const next = new Set(prev).add(id);
+        localStorage.setItem('namma_supported_posts', JSON.stringify(Array.from(next)));
+        return next;
+      });
       await apiFetch(`/reports/${id}/support`, { method: "POST" });
+      const res = await apiFetch('/feed');
+      if (res.ok) {
+         const data = await res.json();
+         setFeed(data);
+      }
     } catch (e) {
-      console.error("Failed to support post", e);
+      console.error("Failed to support", e);
+      setSupportedPosts(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
+  const handleCleanup = async (id: number) => {
+    try {
+      try {
+        const permissions = await Camera.requestPermissions({ permissions: ['camera'] });
+        if (permissions.camera === 'denied' || permissions.camera === 'prompt-with-rationale') {
+          console.warn("Camera permission denied");
+          return;
+        }
+      } catch (e) {}
+
+      const image = await Camera.getPhoto({
+        quality: 50,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera
+      });
+      
+      if (image.base64String) {
+        setIsCleaningUp(id);
+        const photoData = `data:image/jpeg;base64,${image.base64String}`;
+        const username = getCurrentUser();
+        
+        await apiFetch(`/reports/${id}/cleanup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: username,
+            cleanup_image_base64: photoData
+          })
+        });
+        
+        // Refresh feed
+        const res = await apiFetch('/feed');
+        if (res.ok) {
+           const data = await res.json();
+           setFeed(data);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to cleanup", e);
+    } finally {
+      setIsCleaningUp(null);
     }
   };
 
@@ -162,18 +227,42 @@ export default function FeedPage() {
                     </div>
                   </div>
                 </div>
-                <div className="bg-[#10b981]/5 px-3 py-1 rounded-full border border-[#10b981]/20">
-                  <span className="text-[#d4af37] text-xs font-black">+10 Eco XP</span>
+                <div className="flex space-x-2">
+                  <div className="bg-[#10b981]/5 px-3 py-1 rounded-full border border-[#10b981]/20">
+                    <span className="text-[#d4af37] text-xs font-black">+10 Eco XP</span>
+                  </div>
+                  {post.severity && SEVERITIES.find(s => s.value == post.severity) && (
+                    <div className="bg-black/40 px-3 py-1 rounded-full border border-white/10 flex items-center">
+                      <span className={cn("text-xs font-bold", SEVERITIES.find(s => s.value == post.severity)?.color)}>
+                        {SEVERITIES.find(s => s.value == post.severity)?.label}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Photo */}
-              <div className="w-full aspect-square bg-[#000000] relative border-y border-[#10b981]/20">
-                {post.image_base64 ? (
-                  <img src={post.image_base64} alt="Report" className="w-full h-full object-cover" />
+              <div className="w-full relative border-y border-[#10b981]/20 bg-[#000000]">
+                {post.cleanup_image_base64 ? (
+                  <div className="grid grid-cols-2">
+                    <div className="aspect-square relative">
+                      <img src={post.image_base64} alt="Before" className="w-full h-full object-cover" />
+                      <div className="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded text-[10px] font-bold text-white tracking-widest uppercase">Before</div>
+                    </div>
+                    <div className="aspect-square relative border-l border-[#10b981]/20">
+                      <img src={post.cleanup_image_base64} alt="After" className="w-full h-full object-cover" />
+                      <div className="absolute top-2 left-2 bg-[#2E6F40]/80 px-2 py-1 rounded text-[10px] font-bold text-white tracking-widest uppercase">Cleaned</div>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white/20">
-                    No Photo
+                  <div className="w-full aspect-square relative">
+                    {post.image_base64 ? (
+                      <img src={post.image_base64} alt="Report" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white/20">
+                        No Photo
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="absolute bottom-3 left-3 bg-[#000000]/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center space-x-1 border border-[#10b981]/20">
@@ -190,14 +279,38 @@ export default function FeedPage() {
                 </p>
                 <button 
                   onClick={() => handleSupport(post.id)}
-                  className="px-3 py-1.5 bg-[#10b981]/5 hover:bg-[#10b981]/5 rounded-full transition-colors group flex items-center space-x-1.5"
+                  disabled={supportedPosts.has(post.id)}
+                  className={cn("px-3 py-1.5 rounded-full transition-all group flex items-center space-x-1.5", 
+                    supportedPosts.has(post.id) 
+                      ? "bg-[#10b981]/20 shadow-[0_0_15px_rgba(16,185,129,0.4)] border border-[#10b981]/50" 
+                      : "bg-[#10b981]/5 hover:bg-[#10b981]/10 border border-transparent"
+                  )}
                 >
-                  <Megaphone className="w-5 h-5 text-zinc-400 group-hover:text-zinc-400 transition-colors" />
-                  <span className="text-sm font-semibold text-zinc-400 group-hover:text-white transition-colors">
+                  <Megaphone className={cn("w-5 h-5 transition-colors", supportedPosts.has(post.id) ? "text-[#10b981]" : "text-zinc-400 group-hover:text-white")} />
+                  <span className={cn("text-sm font-semibold transition-colors", supportedPosts.has(post.id) ? "text-[#10b981]" : "text-zinc-400 group-hover:text-white")}>
                     {post.supports || 0}
                   </span>
                 </button>
               </div>
+              
+              {!post.cleanup_image_base64 && (
+                <div className="px-4 pb-4">
+                  <button 
+                    onClick={() => handleCleanup(post.id)}
+                    disabled={isCleaningUp === post.id}
+                    className="w-full bg-[#d4af37] hover:bg-[#d4af37]/80 text-[#050505] font-black py-3 rounded-xl transition-colors shadow-[0_0_20px_rgba(212,175,55,0.4)] flex items-center justify-center space-x-2 disabled:opacity-50"
+                  >
+                    {isCleaningUp === post.id ? (
+                      <div className="w-5 h-5 border-2 border-[#050505]/30 border-t-[#050505] rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <CameraIcon className="w-5 h-5 text-[#050505]" />
+                        <span>I cleaned this up! (+20 XP)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </motion.div>
           ))}
         </div>

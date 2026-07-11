@@ -91,6 +91,12 @@ pwa-camera-modal-instance {
 }
 
 /* Custom Black Leaflet Popup */
+.leaflet-container {
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+}
+
 .custom-popup .leaflet-popup-content-wrapper,
 .custom-popup .leaflet-popup-tip {
   background: #000000 !important;
