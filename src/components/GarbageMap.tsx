@@ -32,11 +32,14 @@ interface GarbageMapProps {
 
 function LocationTracker({ loc }: { loc?: { lat: number; lng: number } | null }) {
   const map = useMap();
+  const [hasCentered, setHasCentered] = useState(false);
+
   useEffect(() => {
-    if (loc) {
+    if (loc && !hasCentered) {
       map.flyTo([loc.lat, loc.lng], 15, { animate: true, duration: 1.5 });
+      setHasCentered(true);
     }
-  }, [loc, map]);
+  }, [loc, map, hasCentered]);
   return null;
 }
 
