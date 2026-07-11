@@ -73,9 +73,11 @@ const LocationTag = ({ lat, lng }: { lat: number, lng: number }) => {
   return <span className="text-xs text-white font-semibold shadow-sm">{address}</span>;
 };
 
+let cachedFeed: FeedItem[] | null = null;
+
 export default function FeedPage() {
-  const [feed, setFeed] = useState<FeedItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [feed, setFeed] = useState<FeedItem[]>(cachedFeed || []);
+  const [loading, setLoading] = useState(!cachedFeed);
   const [isCleaningUp, setIsCleaningUp] = useState<number | null>(null);
   const [supportedPosts, setSupportedPosts] = useState<Set<number>>(new Set());
 
@@ -90,6 +92,7 @@ export default function FeedPage() {
         const res = await apiFetch('/feed');
         if (res.ok) {
           const data = await res.json();
+          cachedFeed = data;
           setFeed(data);
         }
       } catch (e) {

@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Navigation, Flame, Target, CheckCircle2, X, Info } from "lucide-react";
 import { apiFetch, getCurrentUser } from "@/lib/api";
 import { getLocalStreak } from "@/lib/streak";
 import { getFastLocation } from "@/lib/location";
 import { Geolocation } from "@capacitor/geolocation";
+import dynamic from "next/dynamic";
 
 const GarbageMap = dynamic(() => import("@/components/GarbageMap"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-[#000000] rounded-2xl border border-[#10b981]/20">
+    <div className="w-full h-full flex items-center justify-center bg-[#000000] rounded-2xl border border-[#10b981]/20 shadow-[0_15px_50px_-12px_rgba(0,0,0,1)] ring-1 ring-black/5">
       <div className="flex flex-col items-center">
         <MapPin className="text-zinc-400 w-8 h-8 animate-bounce mb-4" />
         <p className="text-zinc-400 font-bold uppercase tracking-widest text-xs">Loading Map Data...</p>
@@ -33,12 +33,25 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   return Math.round(R * c);
 }
 
+let cachedClosestMission: any = null;
+let cachedObjectives: any = { hotspot: false, sunset: false, newArea: false };
+
 export default function Home() {
-  const [closestMission, setClosestMission] = useState<{ id: number, lat: number, lng: number, distance: number, severity?: any } | null>(null);
-  const [userLoc, setUserLoc] = useState<{lat: number, lng: number} | null>(null);
+  const [closestMission, setClosestMission] = useState<{ id: number, lat: number, lng: number, distance: number, severity?: any } | null>(cachedClosestMission);
+  
+  // Try to instantly grab location from cache on mount
+  const [userLoc, setUserLoc] = useState<{lat: number, lng: number} | null>(() => {
+    if (typeof window !== 'undefined') {
+      const lat = localStorage.getItem('namma_lat');
+      const lng = localStorage.getItem('namma_lng');
+      if (lat && lng) return { lat: parseFloat(lat), lng: parseFloat(lng) };
+    }
+    return null;
+  });
+  
   const [streak, setStreak] = useState(0);
   const [isMissionDismissed, setIsMissionDismissed] = useState(false);
-  const [objectives, setObjectives] = useState({ hotspot: false, sunset: false, newArea: false });
+  const [objectives, setObjectives] = useState(cachedObjectives);
 
   useEffect(() => {
     let watchId: string;
@@ -81,7 +94,10 @@ export default function Home() {
             closest = { id: report.id, lat: report.pos[0], lng: report.pos[1], distance: dist, severity: report.severity || 1 };
           }
         });
-        if (closest && minDistance < 10000) setClosestMission(closest);
+        if (closest && minDistance < 10000) {
+          cachedClosestMission = closest;
+          setClosestMission(closest);
+        }
         
         const feedRes = await apiFetch('/feed');
         if (feedRes.ok) {
@@ -95,6 +111,7 @@ export default function Home() {
             }),
             newArea: myReports.length > 1
           };
+          cachedObjectives = newObjectives;
           setObjectives(newObjectives);
           
           if (newObjectives.hotspot && newObjectives.sunset && newObjectives.newArea) {

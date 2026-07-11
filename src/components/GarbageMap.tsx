@@ -24,14 +24,17 @@ interface Hotspot {
   image_base64?: string;
 }
 
+let cachedHotspots: Hotspot[] | null = null;
+
 export default function GarbageMap() {
-  const [hotspots, setHotspots] = useState<Hotspot[]>([]);
+  const [hotspots, setHotspots] = useState<Hotspot[]>(cachedHotspots || []);
 
   useEffect(() => {
     const fetchReports = async () => {
       try {
         const res = await apiFetch('/reports');
         const data = await res.json();
+        cachedHotspots = data;
         setHotspots(data);
       } catch (e) {
         console.error("Failed to fetch reports", e);
