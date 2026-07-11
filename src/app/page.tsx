@@ -198,7 +198,7 @@ export default function Home() {
         transition={{ delay: 0.2 }}
         className="w-full flex-1 relative z-0 rounded-2xl overflow-hidden shadow-[0_15px_50px_-12px_rgba(0,0,0,1)] ring-1 ring-black/5"
       >
-        <GarbageMap />
+        <GarbageMap userLoc={userLoc} />
 
         {/* Nearby Mission Overlay */}
         <AnimatePresence>

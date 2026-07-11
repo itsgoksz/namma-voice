@@ -1,4 +1,4 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://namma-voice-production.up.railway.app";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : "https://namma-voice-production.up.railway.app");
 
 // Helper to get the current logged in user from localStorage
 export const getCurrentUser = () => {

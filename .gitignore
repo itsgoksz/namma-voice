@@ -43,3 +43,7 @@ backend/venv/
 backend/__pycache__/
 backend/namma.db
 android/app/build/
+*.apk
+*.log
+temp_*.json
+.vscode/

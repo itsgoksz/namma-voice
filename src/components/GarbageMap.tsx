@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { apiFetch } from "@/lib/api";
 
@@ -26,7 +26,21 @@ interface Hotspot {
 
 let cachedHotspots: Hotspot[] | null = null;
 
-export default function GarbageMap() {
+interface GarbageMapProps {
+  userLoc?: { lat: number; lng: number } | null;
+}
+
+function LocationTracker({ loc }: { loc?: { lat: number; lng: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (loc) {
+      map.flyTo([loc.lat, loc.lng], 15, { animate: true, duration: 1.5 });
+    }
+  }, [loc, map]);
+  return null;
+}
+
+export default function GarbageMap({ userLoc }: GarbageMapProps) {
   const [hotspots, setHotspots] = useState<Hotspot[]>(cachedHotspots || []);
 
   useEffect(() => {
@@ -63,6 +77,26 @@ export default function GarbageMap() {
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
+
+        <LocationTracker loc={userLoc} />
+
+        {/* User Location Marker */}
+        {userLoc && (
+          <CircleMarker
+            center={[userLoc.lat, userLoc.lng]}
+            radius={8}
+            pathOptions={{
+              color: '#3b82f6',
+              fillColor: '#3b82f6',
+              fillOpacity: 1,
+              weight: 3,
+            }}
+          >
+            <Popup className="custom-popup">
+              <div className="font-bold text-[#3b82f6] text-center">You are here</div>
+            </Popup>
+          </CircleMarker>
+        )}
 
         {hotspots.map((spot) => {
           const radius = Math.max(10, Math.min(30, spot.reports * 5 + 8));

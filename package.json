@@ -13,6 +13,7 @@
     "@capacitor/camera": "^8.2.1",
     "@capacitor/core": "^8.4.1",
     "@capacitor/geolocation": "^8.2.0",
+    "@capacitor/ios": "^8.4.1",
     "@capacitor/preferences": "^8.0.1",
     "@ionic/pwa-elements": "^3.4.0",
     "clsx": "^2.1.1",
