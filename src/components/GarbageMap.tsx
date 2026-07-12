@@ -12,6 +12,13 @@ import { LatLngBoundsExpression } from "leaflet";
 // Initial center
 const center: [number, number] = [12.9000, 77.5850];
 
+// Allowed bounds: South West [lat, lng] to North East [lat, lng]
+// Covers JP Nagar, Jayanagar, and BTM Layout
+const allowedBounds: LatLngBoundsExpression = [
+  [12.880, 77.550], // South West 
+  [12.950, 77.630]  // North East
+];
+
 interface Hotspot {
   id: number;
   pos: [number, number];
@@ -65,7 +72,9 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
       <MapContainer
         center={userLoc ? [userLoc.lat, userLoc.lng] : center}
         zoom={14}
-        minZoom={12}
+        minZoom={13}
+        maxBounds={allowedBounds}
+        maxBoundsViscosity={1.0}
         scrollWheelZoom={true}
         className="w-full h-full bg-transparent"
         zoomControl={false}
