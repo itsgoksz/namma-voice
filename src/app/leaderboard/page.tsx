@@ -16,22 +16,25 @@ interface User {
 
 export default function LeaderboardPage() {
   const [leaders, setLeaders] = useState<User[]>([]);
+  const [areaStats, setAreaStats] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"users" | "areas">("users");
   const currentUser = getCurrentUser();
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
+    const fetchData = async () => {
       try {
-        const res = await apiFetch('/leaderboard');
-        if (res.ok) {
-          const data = await res.json();
-          setLeaders(data);
-        }
+        const [leadersRes, areasRes] = await Promise.all([
+          apiFetch('/leaderboard'),
+          apiFetch('/area_standings')
+        ]);
+        if (leadersRes.ok) setLeaders(await leadersRes.json());
+        if (areasRes.ok) setAreaStats(await areasRes.json());
       } catch (e) {
-        console.error("Failed to fetch leaderboard", e);
+        console.error("Failed to fetch leaderboard data", e);
       }
     };
-    fetchLeaderboard();
-    const interval = setInterval(fetchLeaderboard, 5000);
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -46,13 +49,26 @@ export default function LeaderboardPage() {
         className="flex flex-col items-start justify-center mt-2 space-y-1"
       >
         <h1 className="text-4xl font-bold text-white tracking-tight">Leaderboard</h1>
-        <div className="flex items-center space-x-1 mt-1 opacity-80">
-          <MapPin className="text-zinc-400 w-4 h-4" />
-          <p className="text-zinc-400 text-sm font-semibold">JP Nagar 3rd Phase</p>
-        </div>
       </motion.div>
 
-      {/* Top 3 Podium */}
+      <div className="flex space-x-2 w-full mt-2">
+        <button 
+          onClick={() => setActiveTab('users')} 
+          className={cn("flex-1 py-2.5 rounded-2xl font-bold text-sm transition-all", activeTab === 'users' ? 'bg-[#10b981] text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-white/5 text-zinc-400')}
+        >
+          Top Users
+        </button>
+        <button 
+          onClick={() => setActiveTab('areas')} 
+          className={cn("flex-1 py-2.5 rounded-2xl font-bold text-sm transition-all", activeTab === 'areas' ? 'bg-[#10b981] text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-white/5 text-zinc-400')}
+        >
+          Area Standings
+        </button>
+      </div>
+
+      {activeTab === 'users' ? (
+        <>
+          {/* Top 3 Podium */}
       {leaders.length >= 3 && (
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -146,6 +162,46 @@ export default function LeaderboardPage() {
           </div>
         )}
       </motion.div>
+      </>) : (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="glass-panel rounded-3xl overflow-y-auto flex-1 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-4 space-y-4"
+        >
+          {areaStats.sort((a,b) => b.reports + b.cleanups - (a.reports + a.cleanups)).map((area, index) => (
+            <div key={area.area} className="bg-black/40 rounded-2xl p-4 border border-white/5 flex flex-col space-y-3 relative overflow-hidden">
+              <div className="flex justify-between items-center z-10">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xl">{index === 0 ? '👑' : '📍'}</span>
+                  <h3 className="text-lg font-bold text-white">{area.area}</h3>
+                </div>
+                <div className="bg-[#10b981]/20 px-3 py-1 rounded-full border border-[#10b981]/30 text-xs font-bold text-[#10b981]">
+                  Rank #{index + 1}
+                </div>
+              </div>
+              <div className="flex space-x-4 z-10">
+                <div className="flex flex-col">
+                  <span className="text-xs text-zinc-400 uppercase tracking-wider font-bold">Reports</span>
+                  <span className="text-xl font-black text-white">{area.reports}</span>
+                </div>
+                <div className="w-px bg-white/10"></div>
+                <div className="flex flex-col">
+                  <span className="text-xs text-[#d4af37] uppercase tracking-wider font-bold">Cleanups</span>
+                  <span className="text-xl font-black text-[#d4af37]">{area.cleanups}</span>
+                </div>
+              </div>
+              {/* Progress bar background indicator */}
+              <div 
+                className="absolute left-0 bottom-0 top-0 bg-[#10b981]/5 z-0" 
+                style={{ width: `${Math.min(100, (area.reports + area.cleanups) * 5)}%` }} 
+              />
+            </div>
+          ))}
+          {areaStats.length === 0 && (
+            <div className="text-center text-zinc-500 py-10 text-sm">No areas found. Make a report!</div>
+          )}
+        </motion.div>
+      )}
     </div>
   );
 }

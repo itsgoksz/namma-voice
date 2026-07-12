@@ -47,3 +47,5 @@ android/app/build/
 *.log
 temp_*.json
 .vscode/
+namma.db
+backend/uploads/

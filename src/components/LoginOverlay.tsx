@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Leaf } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { getFastLocation } from "@/lib/location";
 
 export default function LoginOverlay() {
   const [isOpen, setIsOpen] = useState(true);
@@ -24,10 +25,17 @@ export default function LoginOverlay() {
     if (name.trim()) {
       setIsLoading(true);
       try {
+        let loc = { lat: 0, lng: 0 };
+        try {
+          loc = await getFastLocation();
+        } catch (e) {
+          console.log("Could not get location for login");
+        }
+        
         await apiFetch('/login', {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: name.trim() })
+          body: JSON.stringify({ name: name.trim(), lat: loc.lat, lng: loc.lng })
         });
         localStorage.setItem("namma_user", name.trim());
         setIsOpen(false);
@@ -78,8 +86,8 @@ export default function LoginOverlay() {
             </div>
             
             <div className="space-y-2">
-              <h1 className="text-4xl font-black text-white tracking-tight">Namma Voice</h1>
-              <p className="text-zinc-400 font-medium">Keep your streets clean. Earn Eco XP.</p>
+              <h1 className="text-4xl font-black text-white tracking-tight">Namma Hood</h1>
+              <p className="text-[#10b981] font-bold tracking-widest text-sm uppercase mt-1">Beta Access</p>
             </div>
 
             <form onSubmit={handleLogin} className="w-full space-y-4 mt-8">

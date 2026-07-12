@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { apiFetch, getCurrentUser } from "@/lib/api";
 import { getFastLocation } from "@/lib/location";
-import { cn } from "@/lib/utils";
+import { cn, compressImageBase64 } from "@/lib/utils";
+import { enqueueOfflineTask } from "@/lib/offlineSync";
 
 const SEVERITIES = [
   { value: 1, label: "Light", desc: "Small litter", icon: Info, color: "text-zinc-400", bg: "bg-[#10b981]", border: "border-[#10b981]/20" },
@@ -54,24 +55,38 @@ export default function ReportPage() {
     const username = getCurrentUser();
 
     try {
-      await apiFetch('/reports', {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          lat: finalLocation.lat,
-          lng: finalLocation.lng,
-          image_base64: photo,
-          severity: String(severity)
-        })
-      });
+      const compressedPhoto = await compressImageBase64(photo);
+      const payload = {
+        username,
+        lat: finalLocation.lat,
+        lng: finalLocation.lng,
+        severity: SEVERITIES.find(s => s.value === severity)?.label.toLowerCase() || 'low',
+        image_base64: compressedPhoto
+      };
 
+      try {
+        await apiFetch('/reports', {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      } catch (e) {
+        console.warn("Network failed, enqueuing offline task", e);
+        await enqueueOfflineTask('/reports', 'POST', payload);
+      }
+
+      // Try tracking event if we had segment
+      try {
+        if ((window as any).analytics) {
+          (window as any).analytics.track('Report Submitted', { severity });
+        }
+      } catch (e) {}
       setSuccess(true);
       setTimeout(() => {
         router.push('/');
       }, 2000);
     } catch (e) {
-      console.error("Failed to submit", e);
+      console.error("Failed to process report", e);
     } finally {
       setIsSubmitting(false);
     }

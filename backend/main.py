@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
@@ -8,6 +9,8 @@ from typing import List, Optional
 from datetime import datetime
 
 import os
+import uuid
+import base64
 
 # Database Setup
 # We use an environment variable so we can point to a persistent volume on Railway
@@ -23,6 +26,9 @@ class DBUser(Base):
     xp = Column(Integer, default=0)
     level = Column(Integer, default=1)
     reports_count = Column(Integer, default=0)
+    area = Column(String, default="Unknown")
+    last_active = Column(DateTime, default=datetime.utcnow)
+    current_streak = Column(Integer, default=0)
 
 class DBReport(Base):
     __tablename__ = "reports"
@@ -35,6 +41,8 @@ class DBReport(Base):
     cleanup_image_base64 = Column(String, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
     supports = Column(Integer, default=0)
+    status = Column(String, default="REPORTED")
+    volunteers = Column(Integer, default=0)
 
 Base.metadata.create_all(bind=engine)
 
@@ -44,14 +52,30 @@ def auto_migrate():
         import sqlite3
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
-        c.execute("ALTER TABLE reports ADD COLUMN cleanup_image_base64 VARCHAR")
+        try: c.execute("ALTER TABLE reports ADD COLUMN cleanup_image_base64 VARCHAR")
+        except: pass
+        try: c.execute("ALTER TABLE users ADD COLUMN area VARCHAR DEFAULT 'Unknown'")
+        except: pass
+        try: c.execute("ALTER TABLE users ADD COLUMN last_active DATETIME")
+        except: pass
+        try: c.execute("ALTER TABLE users ADD COLUMN current_streak INTEGER DEFAULT 0")
+        except: pass
+        try: c.execute("ALTER TABLE reports ADD COLUMN status VARCHAR DEFAULT 'REPORTED'")
+        except: pass
+        try: c.execute("ALTER TABLE reports ADD COLUMN volunteers INTEGER DEFAULT 0")
+        except: pass
         conn.commit()
         conn.close()
     except Exception:
         pass
 
 auto_migrate()
+
+import os
+os.makedirs("uploads", exist_ok=True)
+
 app = FastAPI()
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,
@@ -63,6 +87,8 @@ app.add_middleware(
 
 class UserCreate(BaseModel):
     name: str
+    lat: Optional[float] = None
+    lng: Optional[float] = None
 
 class UserResponse(BaseModel):
     id: int
@@ -70,6 +96,7 @@ class UserResponse(BaseModel):
     xp: int
     level: int
     reports_count: int
+    area: str
 
 class CleanupCreate(BaseModel):
     username: str
@@ -100,6 +127,13 @@ class FeedResponse(BaseModel):
     timestamp: datetime
     supports: int
     severity: str = "low"
+    status: str = "REPORTED"
+    volunteers: int = 0
+
+class AreaStandingResponse(BaseModel):
+    area: str
+    reports: int
+    cleanups: int
 
 def get_db():
     db = SessionLocal()
@@ -108,15 +142,52 @@ def get_db():
     finally:
         db.close()
 
+def save_base64_image(base64_str: str) -> Optional[str]:
+    if not base64_str: return None
+    if base64_str.startswith("http") or base64_str.startswith("/uploads"): return base64_str
+    try:
+        if "," in base64_str:
+            header, encoded = base64_str.split(",", 1)
+            ext = header.split(";")[0].split("/")[1]
+        else:
+            encoded = base64_str
+            ext = "jpg"
+        filename = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join("uploads", filename)
+        with open(filepath, "wb") as f:
+            f.write(base64.b64decode(encoded))
+        return f"/uploads/{filename}"
+    except Exception as e:
+        print("Image save error:", e)
+        return base64_str
+
+def get_area_from_location(lat: float, lng: float) -> str:
+    if not lat or not lng: return "Unknown"
+    # JP Nagar approx: lat 12.90 to 12.92, lng 77.57 to 77.60
+    # Jayanagar approx: lat 12.92 to 12.94, lng 77.57 to 77.60
+    # BTM Layout approx: lat 12.90 to 12.92, lng 77.60 to 77.62
+    if 12.92 <= lat <= 12.94 and 77.57 <= lng <= 77.60: return "Jayanagar"
+    if 12.90 <= lat <= 12.92 and 77.57 <= lng <= 77.60: return "JP Nagar"
+    if 12.90 <= lat <= 12.92 and 77.60 <= lng <= 77.62: return "BTM Layout"
+    return "Unknown"
+
 @app.post("/login", response_model=UserResponse)
 def login(user: UserCreate):
     db = SessionLocal()
     db_user = db.query(DBUser).filter(DBUser.name == user.name).first()
+    
+    area = get_area_from_location(user.lat, user.lng) if user.lat and user.lng else "Unknown"
+    
     if not db_user:
-        db_user = DBUser(name=user.name, xp=0, level=1, reports_count=0)
+        db_user = DBUser(name=user.name, xp=0, level=1, reports_count=0, area=area)
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
+    elif db_user.area == "Unknown" and area != "Unknown":
+        db_user.area = area
+        db.commit()
+        db.refresh(db_user)
+        
     db.close()
     return db_user
 
@@ -143,13 +214,15 @@ def get_leaderboard():
 def create_report(report: ReportCreate):
     db = SessionLocal()
     
+    image_url = save_base64_image(report.image_base64)
+    
     # Save Report WITH image
     db_report = DBReport(
         username=report.username, 
         lat=report.lat, 
         lng=report.lng, 
         severity=report.severity,
-        image_base64=report.image_base64
+        image_base64=image_url
     )
     db.add(db_report)
     
@@ -202,9 +275,32 @@ def get_feed():
             "cleanup_image_base64": r.cleanup_image_base64,
             "timestamp": r.timestamp,
             "supports": r.supports or 0,
-            "severity": r.severity
+            "severity": r.severity,
+            "status": r.status,
+            "volunteers": r.volunteers or 0
         })
     return result
+
+@app.get("/area_standings", response_model=List[AreaStandingResponse])
+def get_area_standings():
+    db = SessionLocal()
+    reports = db.query(DBReport).all()
+    db.close()
+    
+    stats = {
+        "Jayanagar": {"reports": 0, "cleanups": 0},
+        "JP Nagar": {"reports": 0, "cleanups": 0},
+        "BTM Layout": {"reports": 0, "cleanups": 0},
+        "Unknown": {"reports": 0, "cleanups": 0}
+    }
+    
+    for r in reports:
+        area = get_area_from_location(r.lat, r.lng)
+        stats[area]["reports"] += 1
+        if r.status == "CLEANED":
+            stats[area]["cleanups"] += 1
+            
+    return [{"area": k, "reports": v["reports"], "cleanups": v["cleanups"]} for k, v in stats.items() if k != "Unknown"]
 
 @app.post("/reports/{report_id}/support")
 def support_report(report_id: int):
@@ -216,12 +312,23 @@ def support_report(report_id: int):
     db.close()
     return {"status": "success"}
 
+@app.post("/reports/{report_id}/volunteer")
+def volunteer_report(report_id: int):
+    db = SessionLocal()
+    db_report = db.query(DBReport).filter(DBReport.id == report_id).first()
+    if db_report:
+        db_report.volunteers = (db_report.volunteers or 0) + 1
+        db.commit()
+    db.close()
+    return {"success": True}
+
 @app.post("/reports/{report_id}/cleanup")
 def cleanup_report(report_id: int, cleanup: CleanupCreate):
     db = SessionLocal()
     db_report = db.query(DBReport).filter(DBReport.id == report_id).first()
     if db_report:
-        db_report.cleanup_image_base64 = cleanup.cleanup_image_base64
+        db_report.cleanup_image_base64 = save_base64_image(cleanup.cleanup_image_base64)
+        db_report.status = "CLEANED"
         
         # Give user XP for cleanup
         db_user = db.query(DBUser).filter(DBUser.name == cleanup.username).first()
@@ -250,5 +357,6 @@ def add_xp(claim: XpClaim):
     db_user.xp += claim.amount
     db_user.level = (db_user.xp // 50) + 1
     db.commit()
+    new_xp = db_user.xp
     db.close()
-    return {"status": "success", "new_xp": db_user.xp}
+    return {"status": "success", "new_xp": new_xp}

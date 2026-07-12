@@ -5,12 +5,13 @@ import BottomNav from "@/components/BottomNav";
 import Starfield from "@/components/Starfield";
 import LoginOverlay from "@/components/LoginOverlay";
 import PWACameraSetup from "@/components/PWACameraSetup";
+import OfflineSyncWorker from "@/components/OfflineSyncWorker";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Namma Voice",
-  description: "Gamified, location-based civic action app for Bangalore",
+  title: "Namma Hood",
+  description: "Community cleanup civic action platform",
 };
 
 export default function RootLayout({
@@ -22,6 +23,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={`${inter.className} h-[100dvh] w-full overflow-hidden text-white relative bg-black`}>
         <PWACameraSetup />
+        <OfflineSyncWorker />
         <LoginOverlay />
         <Starfield />
         <main className="max-w-md mx-auto h-full w-full relative z-10 pt-6">

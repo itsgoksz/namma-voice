@@ -51,6 +51,33 @@ export default function Home() {
   
   const [streak, setStreak] = useState(0);
   const [isMissionDismissed, setIsMissionDismissed] = useState(false);
+  const [isClaimed, setIsClaimed] = useState(false);
+
+  useEffect(() => {
+    setIsClaimed(localStorage.getItem('namma_weekly_claimed') === 'true');
+  }, []);
+
+  const [claiming, setClaiming] = useState(false);
+  const handleClaim = async () => {
+    if (isClaimed || claiming) return;
+    setClaiming(true);
+    localStorage.setItem('namma_weekly_claimed', 'true');
+    setIsClaimed(true);
+    try {
+      await apiFetch('/add_xp', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: getCurrentUser(), amount: 50 })
+      });
+      alert("🎉 Weekly Objectives Complete! +50 Eco XP Earned!");
+    } catch (e) {
+      localStorage.removeItem('namma_weekly_claimed');
+      setIsClaimed(false);
+      console.error(e);
+    } finally {
+      setClaiming(false);
+    }
+  };
   const [objectives, setObjectives] = useState(cachedObjectives);
 
   useEffect(() => {
@@ -113,26 +140,6 @@ export default function Home() {
           };
           cachedObjectives = newObjectives;
           setObjectives(newObjectives);
-          
-          if (newObjectives.hotspot && newObjectives.sunset && newObjectives.newArea) {
-            const isClaimed = localStorage.getItem('namma_weekly_claimed');
-            if (!isClaimed) {
-              // Set the flag synchronously *before* the async call to prevent duplicate triggers
-              localStorage.setItem('namma_weekly_claimed', 'true');
-              
-              try {
-                await apiFetch('/add_xp', {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ username: getCurrentUser(), amount: 50 })
-                });
-                alert("🎉 Weekly Objectives Complete! +50 Eco XP Earned!");
-              } catch (err) {
-                // Revert flag if network fails
-                localStorage.removeItem('namma_weekly_claimed');
-              }
-            }
-          }
         }
       } catch (e) {
         console.error("Failed to load missions", e);
@@ -196,6 +203,22 @@ export default function Home() {
             <span className={`text-sm ${objectives.newArea ? 'font-semibold text-[#ff4d6d] line-through decoration-[#ff4d6d]/50' : 'font-medium text-[#ff4d6d]'}`}>Visit a new area</span>
           </div>
         </div>
+        {objectives.hotspot && objectives.sunset && objectives.newArea && (
+          <button
+            onClick={handleClaim}
+            disabled={isClaimed}
+            className={`w-full mt-4 py-2 rounded-xl font-black text-sm flex items-center justify-center space-x-2 transition-all ${isClaimed ? 'bg-[#10b981]/20 text-[#10b981]' : 'bg-[#d4af37] text-black hover:bg-[#d4af37]/90'}`}
+          >
+            {isClaimed ? (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Claimed (+50 XP)</span>
+              </>
+            ) : (
+              <span>Claim Reward</span>
+            )}
+          </button>
+        )}
       </motion.div>
       
       {/* Map Container */}

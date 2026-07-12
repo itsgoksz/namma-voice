@@ -1,4 +1,4 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' && !('Capacitor' in window) ? 'http://localhost:8000' : "https://namma-voice-production.up.railway.app");
+export const API_URL = "http://localhost:8000";
 
 // Helper to get the current logged in user from localStorage
 export const getCurrentUser = () => {
@@ -21,4 +21,11 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     ...options,
     headers: defaultHeaders
   });
+};
+
+export const getImageUrl = (url?: string) => {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
+  if (url.startsWith('/uploads')) return `${API_URL}${url}`;
+  return url;
 };

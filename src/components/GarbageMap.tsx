@@ -1,20 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { apiFetch } from "@/lib/api";
+import L from "leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
+import { apiFetch, getImageUrl } from "@/lib/api";
 
 import { LatLngBoundsExpression } from "leaflet";
 
-// Central JP Nagar approximate center
+// Initial center
 const center: [number, number] = [12.9000, 77.5850];
-
-// JP Nagar Boundaries (Phases 1-9)
-const jpBounds: LatLngBoundsExpression = [
-  [12.8800, 77.5600], // South-West (approx Kanakapura Road / 9th Phase)
-  [12.9300, 77.6100], // North-East (approx Bannerghatta Road / Jayanagar border)
-];
 
 interface Hotspot {
   id: number;
@@ -67,11 +63,9 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
   return (
     <div className="w-full h-full relative z-0 bg-black">
       <MapContainer
-        center={center}
+        center={userLoc ? [userLoc.lat, userLoc.lng] : center}
         zoom={14}
-        minZoom={13}
-        maxBounds={jpBounds}
-        maxBoundsViscosity={1.0}
+        minZoom={12}
         scrollWheelZoom={true}
         className="w-full h-full bg-transparent"
         zoomControl={false}
@@ -101,34 +95,42 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
           </CircleMarker>
         )}
 
-        {hotspots.map((spot) => {
-          const radius = Math.max(10, Math.min(30, spot.reports * 5 + 8));
-          const color = spot.severity === 'high' ? '#ff4d6d' : spot.severity === 'medium' ? '#ff8fa3' : '#ffb3c1';
+        <MarkerClusterGroup
+          chunkedLoading
+          spiderfyOnMaxZoom={false}
+          showCoverageOnHover={false}
+          maxClusterRadius={50}
+        >
+          {hotspots.map((spot) => {
+            const radius = Math.max(10, Math.min(30, spot.reports * 5 + 8));
+            const color = spot.severity === 'high' ? '#ff4d6d' : spot.severity === 'medium' ? '#ff8fa3' : '#ffb3c1';
+            
+            const customIcon = L.divIcon({
+              className: 'custom-div-icon',
+              html: `<div style="background-color: ${color}; width: ${radius*2}px; height: ${radius*2}px; border-radius: 50%; opacity: 0.6; border: 2px solid ${color}; transform: translate(-50%, -50%);"></div>`,
+              iconSize: [0, 0],
+              iconAnchor: [0, 0]
+            });
 
-          return (
-            <CircleMarker
-              key={spot.id}
-              center={spot.pos}
-              radius={radius}
-              pathOptions={{
-                color: color,
-                fillColor: color,
-                fillOpacity: 0.6,
-                weight: 2,
-              }}
-            >
-              <Popup className="custom-popup" minWidth={150}>
-                <div className="text-center font-bold flex flex-col items-center">
-                  {spot.image_base64 && (
-                    <img src={spot.image_base64} alt="Hotspot" className="w-full h-24 object-cover rounded-lg mb-2" />
-                  )}
-                  <span className="text-zinc-400 text-xl">{spot.reports}</span>
-                  <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">Active Reports</span>
-                </div>
-              </Popup>
-            </CircleMarker>
-          );
-        })}
+            return (
+              <Marker
+                key={spot.id}
+                position={spot.pos}
+                icon={customIcon}
+              >
+                <Popup className="custom-popup" minWidth={150}>
+                  <div className="text-center font-bold flex flex-col items-center">
+                    {spot.image_base64 && (
+                      <img src={getImageUrl(spot.image_base64)} alt="Hotspot" className="w-full h-24 object-cover rounded-lg mb-2" crossOrigin="anonymous" />
+                    )}
+                    <span className="text-zinc-400 text-xl">{spot.reports}</span>
+                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">Active Reports</span>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MarkerClusterGroup>
       </MapContainer>
 
       <div className="absolute bottom-6 left-4 z-[400] glass-panel p-4 bg-[rgba(13,27,10,0.95)] shadow-[0_0_15px_rgba(0,0,0,0.8)] border border-[#10b981]/20 rounded-2xl">
