@@ -100,6 +100,27 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
           spiderfyOnMaxZoom={false}
           showCoverageOnHover={false}
           maxClusterRadius={50}
+          zoomToBoundsOnClick={false}
+          iconCreateFunction={(cluster: any) => {
+            const count = cluster.getChildCount();
+            const size = Math.max(40, Math.min(60, count * 2 + 30));
+            return L.divIcon({
+              html: `
+                <div 
+                  style="width: ${size}px; height: ${size}px;" 
+                  class="relative flex items-center justify-center rounded-full cursor-pointer"
+                  onclick="this.querySelector('span').style.color = 'white';"
+                >
+                  <div class="absolute inset-0 bg-[#ff4d6d] rounded-full opacity-40 animate-ping" style="animation-duration: 3s;"></div>
+                  <div class="absolute inset-1 bg-[#ff4d6d] rounded-full border-2 border-white/30 shadow-[0_0_20px_#ff4d6d] flex items-center justify-center">
+                    <span class="text-transparent font-black text-xl drop-shadow-md transition-colors duration-300 select-none">${count}</span>
+                  </div>
+                </div>
+              `,
+              className: 'custom-cluster',
+              iconSize: L.point(size, size, true),
+            });
+          }}
         >
           {hotspots.map((spot) => {
             const radius = Math.max(10, Math.min(30, spot.reports * 5 + 8));
