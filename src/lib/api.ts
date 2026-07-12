@@ -1,4 +1,4 @@
-export const API_URL = "http://localhost:8000";
+export const API_URL = "https://namma-voice-production.up.railway.app";
 
 // Helper to get the current logged in user from localStorage
 export const getCurrentUser = () => {
