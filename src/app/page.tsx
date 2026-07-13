@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Navigation, Flame, Target, CheckCircle2, X, Info } from "lucide-react";
 import { getCurrentUser } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
-import { getLocalStreak } from "@/lib/streak";
+import { getUserStreak } from "@/lib/streak";
 import { getFastLocation } from "@/lib/location";
 import { Geolocation } from "@capacitor/geolocation";
 import dynamic from "next/dynamic";
@@ -101,7 +101,7 @@ export default function Home() {
     };
     requestNativePermissions();
 
-    setStreak(getLocalStreak());
+    getUserStreak(getCurrentUser()).then(setStreak);
     const fetchMissions = async () => {
       try {
         const { data: reportsData, error: reportsError } = await supabase.from('reports').select('*');

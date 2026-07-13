@@ -6,7 +6,7 @@ import { Award, Flame, MapPin, Zap, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
-import { getLocalStreak } from "@/lib/streak";
+import { getUserStreak } from "@/lib/streak";
 import { getFastLocation } from "@/lib/location";
 
 export default function ProfilePage() {
@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const [badgeMessage, setBadgeMessage] = useState<{ title: string, text: string } | null>(null);
 
   useEffect(() => {
-    setStreak(getLocalStreak());
+    getUserStreak(getCurrentUser()).then(setStreak);
     
     // Check cache first for instant load
     const cachedLocName = localStorage.getItem('namma_loc_name');
