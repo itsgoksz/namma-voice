@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Camera as CameraIcon, Upload, CheckCircle2, AlertTriangle, AlertOctagon, Info, Flame } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
-import { apiFetch, getCurrentUser } from "@/lib/api";
+import { getCurrentUser } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 import { getFastLocation } from "@/lib/location";
 import { cn, compressImageBase64 } from "@/lib/utils";
 import { enqueueOfflineTask } from "@/lib/offlineSync";
@@ -56,20 +57,33 @@ export default function ReportPage() {
 
     try {
       const compressedPhoto = await compressImageBase64(photo);
+      
+      let imageUrl = null;
+      if (compressedPhoto) {
+        try {
+          const res = await fetch(compressedPhoto);
+          const blob = await res.blob();
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+          const { data, error } = await supabase.storage.from('uploads').upload(fileName, blob, { contentType: 'image/jpeg' });
+          if (!error && data) {
+            imageUrl = data.path;
+          }
+        } catch (e) {
+          console.error("Storage upload failed", e);
+        }
+      }
+
       const payload = {
         username,
         lat: finalLocation.lat,
         lng: finalLocation.lng,
         severity: SEVERITIES.find(s => s.value === severity)?.label.toLowerCase() || 'low',
-        image_base64: compressedPhoto
+        image_base64: imageUrl
       };
 
       try {
-        await apiFetch('/reports', {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
+        const { error } = await supabase.from('reports').insert([payload]);
+        if (error) throw error;
       } catch (e) {
         console.warn("Network failed, enqueuing offline task", e);
         await enqueueOfflineTask('/reports', 'POST', payload);

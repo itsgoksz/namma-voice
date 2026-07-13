@@ -1,5 +1,5 @@
 import { Preferences } from "@capacitor/preferences";
-import { apiFetch } from "./api";
+import { supabase } from "./supabase";
 
 const QUEUE_KEY = "namma_offline_queue";
 
@@ -35,22 +35,15 @@ export async function processOfflineQueue() {
   const queue: OfflineTask[] = JSON.parse(value);
   if (queue.length === 0) return;
 
-  try {
-    const checkRes = await fetch("http://localhost:8000/feed");
-    if (!checkRes.ok) return;
-  } catch (e) {
-    return;
-  }
-
   const remainingQueue: OfflineTask[] = [];
-
   for (const task of queue) {
     try {
-      await apiFetch(task.url, {
-        method: task.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(task.body)
-      });
+      if (task.url === '/reports' && task.method === 'POST') {
+         await supabase.from('reports').insert([task.body]);
+      } else if (task.url.includes('/cleanup')) {
+         const id = task.url.split('/')[2];
+         await supabase.from('reports').update({ cleanup_image_base64: task.body.cleanup_image_base64, status: 'CLEANED' }).eq('id', id);
+      }
       console.log(`Successfully synced task: ${task.id}`);
     } catch (e) {
       console.error(`Failed to sync task: ${task.id}`, e);

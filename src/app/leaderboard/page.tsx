@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Minus, MapPin, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { apiFetch, getCurrentUser } from "@/lib/api";
+import { getCurrentUser } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 interface User {
   id: number;
@@ -23,12 +24,30 @@ export default function LeaderboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [leadersRes, areasRes] = await Promise.all([
-          apiFetch('/leaderboard'),
-          apiFetch('/area_standings')
+        const [{ data: leadersData }, { data: reportsData }] = await Promise.all([
+          supabase.from('users').select('*').order('xp', { ascending: false }).limit(50),
+          supabase.from('reports').select('lat, lng, status')
         ]);
-        if (leadersRes.ok) setLeaders(await leadersRes.json());
-        if (areasRes.ok) setAreaStats(await areasRes.json());
+        
+        if (leadersData) setLeaders(leadersData);
+        if (reportsData) {
+          const stats: Record<string, any> = {
+            "Jayanagar": { area: "Jayanagar", reports: 0, cleanups: 0 },
+            "JP Nagar": { area: "JP Nagar", reports: 0, cleanups: 0 },
+            "BTM Layout": { area: "BTM Layout", reports: 0, cleanups: 0 },
+            "Unknown": { area: "Unknown", reports: 0, cleanups: 0 }
+          };
+          reportsData.forEach(r => {
+            let area = "Unknown";
+            if (r.lat >= 12.92 && r.lat <= 12.94 && r.lng >= 77.57 && r.lng <= 77.60) area = "Jayanagar";
+            else if (r.lat >= 12.90 && r.lat <= 12.92 && r.lng >= 77.57 && r.lng <= 77.60) area = "JP Nagar";
+            else if (r.lat >= 12.90 && r.lat <= 12.92 && r.lng >= 77.60 && r.lng <= 77.62) area = "BTM Layout";
+            
+            stats[area].reports += 1;
+            if (r.status === "CLEANED") stats[area].cleanups += 1;
+          });
+          setAreaStats(Object.values(stats));
+        }
       } catch (e) {
         console.error("Failed to fetch leaderboard data", e);
       }

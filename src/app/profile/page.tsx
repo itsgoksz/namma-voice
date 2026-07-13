@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Award, Flame, MapPin, Zap, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { apiFetch, getCurrentUser } from "@/lib/api";
+import { getCurrentUser } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 import { getLocalStreak } from "@/lib/streak";
 import { getFastLocation } from "@/lib/location";
 
@@ -40,9 +41,8 @@ export default function ProfilePage() {
     const fetchUser = async () => {
       try {
         const username = getCurrentUser();
-        const res = await apiFetch(`/user/${username}`);
-        if (res.ok) {
-          const data = await res.json();
+        const { data, error } = await supabase.from('users').select('*').eq('name', username).single();
+        if (!error && data) {
           setUser(data);
         }
       } catch (e) {

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Navigation, Flame, Target, CheckCircle2, X, Info } from "lucide-react";
-import { apiFetch, getCurrentUser } from "@/lib/api";
+import { getCurrentUser } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 import { getLocalStreak } from "@/lib/streak";
 import { getFastLocation } from "@/lib/location";
 import { Geolocation } from "@capacitor/geolocation";
@@ -64,11 +65,10 @@ export default function Home() {
     localStorage.setItem('namma_weekly_claimed', 'true');
     setIsClaimed(true);
     try {
-      await apiFetch('/add_xp', {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: getCurrentUser(), amount: 50 })
-      });
+      const { data } = await supabase.from('users').select('xp').eq('name', getCurrentUser()).single();
+      if (data) {
+        await supabase.from('users').update({ xp: data.xp + 50 }).eq('name', getCurrentUser());
+      }
       alert("🎉 Weekly Objectives Complete! +50 Eco XP Earned!");
     } catch (e) {
       localStorage.removeItem('namma_weekly_claimed');
@@ -104,9 +104,9 @@ export default function Home() {
     setStreak(getLocalStreak());
     const fetchMissions = async () => {
       try {
-        const res = await apiFetch('/reports');
-        if (!res.ok) return;
-        const data = await res.json();
+        const { data: reportsData, error: reportsError } = await supabase.from('reports').select('*');
+        if (reportsError || !reportsData) return;
+        const data = reportsData.map(r => ({ ...r, pos: [r.lat, r.lng] }));
         
         // Guarantee location within 1.5s max (cache -> GPS -> JP Nagar fallback)
         const loc = await getFastLocation();
@@ -126,9 +126,9 @@ export default function Home() {
           setClosestMission(closest);
         }
         
-        const feedRes = await apiFetch('/feed');
-        if (feedRes.ok) {
-          const feed = await feedRes.json();
+        const { data: feedData, error: feedError } = await supabase.from('reports').select('*').order('timestamp', { ascending: false });
+        if (!feedError && feedData) {
+          const feed = feedData;
           const myReports = feed.filter((r: any) => r.username === getCurrentUser());
           const newObjectives = {
             hotspot: myReports.length > 0,

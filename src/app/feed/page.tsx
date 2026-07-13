@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import * as htmlToImage from "html-to-image";
 import { QRCodeSVG } from "qrcode.react";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
-import { apiFetch, getCurrentUser, getImageUrl } from "@/lib/api";
+import { getCurrentUser, getImageUrl } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 import { Camera as CameraIcon, MapPin, Clock, Megaphone, Info, AlertTriangle, Flame, AlertOctagon, CheckCircle2, Target, Users, Zap, Star, CalendarDays } from "lucide-react";
 import { cn, compressImageBase64 } from "@/lib/utils";
 import { enqueueOfflineTask } from "@/lib/offlineSync";
@@ -157,9 +158,8 @@ export default function FeedPage() {
     
     const fetchFeed = async () => {
       try {
-        const res = await apiFetch('/feed');
-        if (res.ok) {
-          const data = await res.json();
+        const { data, error } = await supabase.from('reports').select('*').order('timestamp', { ascending: false });
+        if (!error && data) {
           cachedFeed = data;
           setFeed(data);
         }
@@ -183,12 +183,12 @@ export default function FeedPage() {
         localStorage.setItem('namma_supported_posts', JSON.stringify(Array.from(next)));
         return next;
       });
-      await apiFetch(`/reports/${id}/support`, { method: "POST" });
-      const res = await apiFetch('/feed');
-      if (res.ok) {
-         const data = await res.json();
-         setFeed(data);
+      const { data: post } = await supabase.from('reports').select('supports').eq('id', id).single();
+      if (post) {
+        await supabase.from('reports').update({ supports: (post.supports || 0) + 1 }).eq('id', id);
       }
+      const { data } = await supabase.from('reports').select('*').order('timestamp', { ascending: false });
+      if (data) setFeed(data);
     } catch (e) {
       console.error("Failed to support", e);
       setSupportedPosts(prev => {
@@ -208,12 +208,12 @@ export default function FeedPage() {
         localStorage.setItem('namma_volunteered_posts', JSON.stringify(Array.from(next)));
         return next;
       });
-      await apiFetch(`/reports/${id}/volunteer`, { method: "POST" });
-      const res = await apiFetch('/feed');
-      if (res.ok) {
-         const data = await res.json();
-         setFeed(data);
+      const { data: post } = await supabase.from('reports').select('volunteers').eq('id', id).single();
+      if (post) {
+        await supabase.from('reports').update({ volunteers: (post.volunteers || 0) + 1 }).eq('id', id);
       }
+      const { data } = await supabase.from('reports').select('*').order('timestamp', { ascending: false });
+      if (data) setFeed(data);
     } catch (e) {
       console.error("Failed to volunteer", e);
       setVolunteeredPosts(prev => {
@@ -282,29 +282,30 @@ export default function FeedPage() {
         setIsCleaningUp(id);
         const photoData = `data:image/jpeg;base64,${image.base64String}`;
         const compressedPhoto = await compressImageBase64(photoData);
-        const username = getCurrentUser();
-        const payload = {
-          username: username,
-          cleanup_image_base64: compressedPhoto
-        };
+        let imageUrl = null;
+        if (compressedPhoto) {
+          try {
+            const res = await fetch(compressedPhoto);
+            const blob = await res.blob();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+            const { data, error } = await supabase.storage.from('uploads').upload(fileName, blob, { contentType: 'image/jpeg' });
+            if (!error && data) imageUrl = data.path;
+          } catch (e) {
+            console.error("Storage upload failed", e);
+          }
+        }
         
         try {
-          await apiFetch(`/reports/${id}/cleanup`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
+          await supabase.from('reports').update({ cleanup_image_base64: imageUrl, status: 'CLEANED' }).eq('id', id);
+          const { data: user } = await supabase.from('users').select('xp').eq('name', getCurrentUser()).single();
+          if (user) await supabase.from('users').update({ xp: user.xp + 20 }).eq('name', getCurrentUser());
         } catch (e) {
-          console.warn("Network failed, enqueuing offline task", e);
-          await enqueueOfflineTask(`/reports/${id}/cleanup`, 'POST', payload);
+          console.warn("Network failed", e);
         }
         
         // Refresh feed
-        const res = await apiFetch('/feed');
-        if (res.ok) {
-           const data = await res.json();
-           setFeed(data);
-        }
+        const { data } = await supabase.from('reports').select('*').order('timestamp', { ascending: false });
+        if (data) setFeed(data);
       }
     } catch (e) {
       console.error("Failed to cleanup", e);

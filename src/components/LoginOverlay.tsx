@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Leaf } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 import { getFastLocation } from "@/lib/location";
 
 export default function LoginOverlay() {
@@ -32,11 +32,17 @@ export default function LoginOverlay() {
           console.log("Could not get location for login");
         }
         
-        await apiFetch('/login', {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: name.trim(), lat: loc.lat, lng: loc.lng })
-        });
+        const { data } = await supabase.from('users').select('*').eq('name', name.trim()).single();
+        if (!data) {
+          // Simple area estimation
+          let area = "Unknown";
+          if (loc.lat >= 12.92 && loc.lat <= 12.94 && loc.lng >= 77.57 && loc.lng <= 77.60) area = "Jayanagar";
+          else if (loc.lat >= 12.90 && loc.lat <= 12.92 && loc.lng >= 77.57 && loc.lng <= 77.60) area = "JP Nagar";
+          else if (loc.lat >= 12.90 && loc.lat <= 12.92 && loc.lng >= 77.60 && loc.lng <= 77.62) area = "BTM Layout";
+
+          await supabase.from('users').insert([{ name: name.trim(), area }]);
+        }
+        
         localStorage.setItem("namma_user", name.trim());
         setIsOpen(false);
       } catch (e) {

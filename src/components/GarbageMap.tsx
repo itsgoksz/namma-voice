@@ -5,7 +5,8 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from "re
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import { apiFetch, getImageUrl } from "@/lib/api";
+import { getImageUrl } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 import { LatLngBoundsExpression } from "leaflet";
 
@@ -52,10 +53,11 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const res = await apiFetch('/reports');
-        const data = await res.json();
-        cachedHotspots = data;
-        setHotspots(data);
+        const { data, error } = await supabase.from('reports').select('*');
+        if (error || !data) return;
+        const formattedData = data.map((r: any) => ({ ...r, pos: [r.lat, r.lng] }));
+        cachedHotspots = formattedData;
+        setHotspots(formattedData);
       } catch (e) {
         console.error("Failed to fetch reports", e);
       }
