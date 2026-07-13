@@ -52,7 +52,7 @@ export default function LoginOverlay() {
       return;
     }
 
-    const dummyEmail = `${trimmedName.toLowerCase()}@nammavoice.local`;
+    const dummyEmail = `${trimmedName.toLowerCase()}@dummy.nammavoice.com`;
 
     setIsLoading(true);
 
