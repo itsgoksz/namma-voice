@@ -52,7 +52,7 @@ export default function LoginOverlay() {
       return;
     }
 
-    const dummyEmail = `${trimmedName.toLowerCase()}@dummy.nammavoice.com`;
+    const dummyEmail = `${trimmedName.toLowerCase()}@example.com`;
 
     setIsLoading(true);
 
@@ -98,7 +98,10 @@ export default function LoginOverlay() {
         });
 
         if (signUpError) {
-          setErrorMsg(signUpError.message);
+          const sanitizedMsg = signUpError.message.includes('Email') 
+            ? "Could not create account with this username. Please try another."
+            : signUpError.message;
+          setErrorMsg(sanitizedMsg);
           setIsLoading(false);
           return;
         }
