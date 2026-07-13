@@ -32,3 +32,25 @@ export async function compressImageBase64(base64Str: string, maxWidth = 800, qua
     img.onerror = (e) => reject(e);
   });
 }
+
+// Basic profanity list (simplified for demonstration, typically this would be a larger list or an external package)
+const BAD_WORDS = ['fuck', 'shit', 'bitch', 'asshole', 'cunt', 'dick', 'pussy', 'bastard', 'slut', 'whore', 'nigger', 'faggot'];
+
+export function hasProfanity(text: string): boolean {
+  const normalizedText = text.toLowerCase().replace(/[^a-z0-9]/g, '');
+  for (const word of BAD_WORDS) {
+    if (normalizedText.includes(word)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function validatePassword(password: string): { valid: boolean; message: string } {
+  if (password.length < 8) return { valid: false, message: "Password must be at least 8 characters long." };
+  if (!/[A-Z]/.test(password)) return { valid: false, message: "Password must contain at least one uppercase letter." };
+  if (!/[a-z]/.test(password)) return { valid: false, message: "Password must contain at least one lowercase letter." };
+  if (!/[0-9]/.test(password)) return { valid: false, message: "Password must contain at least one number." };
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) return { valid: false, message: "Password must contain at least one special character." };
+  return { valid: true, message: "" };
+}
