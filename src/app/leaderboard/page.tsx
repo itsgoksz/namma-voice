@@ -34,8 +34,7 @@ export default function LeaderboardPage() {
           const stats: Record<string, any> = {
             "Jayanagar": { area: "Jayanagar", reports: 0, cleanups: 0 },
             "JP Nagar": { area: "JP Nagar", reports: 0, cleanups: 0 },
-            "BTM Layout": { area: "BTM Layout", reports: 0, cleanups: 0 },
-            "Unknown": { area: "Unknown", reports: 0, cleanups: 0 }
+            "BTM Layout": { area: "BTM Layout", reports: 0, cleanups: 0 }
           };
           reportsData.forEach(r => {
             let area = "Unknown";
@@ -43,8 +42,10 @@ export default function LeaderboardPage() {
             else if (r.lat >= 12.90 && r.lat <= 12.92 && r.lng >= 77.57 && r.lng <= 77.60) area = "JP Nagar";
             else if (r.lat >= 12.90 && r.lat <= 12.92 && r.lng >= 77.60 && r.lng <= 77.62) area = "BTM Layout";
             
-            stats[area].reports += 1;
-            if (r.status === "CLEANED") stats[area].cleanups += 1;
+            if (area !== "Unknown") {
+              stats[area].reports += 1;
+              if (r.status === "CLEANED") stats[area].cleanups += 1;
+            }
           });
           setAreaStats(Object.values(stats));
         }
