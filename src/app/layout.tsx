@@ -6,6 +6,7 @@ import Starfield from "@/components/Starfield";
 import LoginOverlay from "@/components/LoginOverlay";
 import PWACameraSetup from "@/components/PWACameraSetup";
 import OfflineSyncWorker from "@/components/OfflineSyncWorker";
+import NotificationInbox from "@/components/NotificationInbox";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,6 +28,7 @@ export default function RootLayout({
         <LoginOverlay />
         <Starfield />
         <main className="max-w-md mx-auto h-full w-full relative z-10 pt-6">
+          <NotificationInbox />
           {children}
         </main>
         <BottomNav />

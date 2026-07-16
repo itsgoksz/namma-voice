@@ -84,6 +84,21 @@ export default function ReportPage() {
       try {
         const { error } = await supabase.from('reports').insert([payload]);
         if (error) throw error;
+
+        // Grant 10 XP instantly for reporting
+        const { data: user } = await supabase.from('users').select('xp, reports_count, level').eq('name', username).single();
+        if (user) {
+          const newXp = (user.xp || 0) + 10;
+          let newLevel = user.level || 1;
+          if (newXp >= newLevel * 50) {
+            newLevel += 1;
+          }
+          await supabase.from('users').update({ 
+            xp: newXp,
+            level: newLevel,
+            reports_count: (user.reports_count || 0) + 1 
+          }).eq('name', username);
+        }
       } catch (e) {
         console.warn("Network failed, enqueuing offline task", e);
         await enqueueOfflineTask('/reports', 'POST', payload);

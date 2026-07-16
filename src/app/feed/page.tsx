@@ -103,7 +103,7 @@ export default function FeedPage() {
   const posterRef = useRef<HTMLDivElement>(null);
 
   // XP Split States
-  const [splitModalData, setSplitModalData] = useState<{ id: number, severity: string } | null>(null);
+  const [splitModalData, setSplitModalData] = useState<{ id: number, severity: string, imageUrl: string | null } | null>(null);
   const [splitStep, setSplitStep] = useState<1 | 2>(1); // 1 = Claim or Split, 2 = Enter Usernames
   const [splitCount, setSplitCount] = useState(2);
   const [splitUsernames, setSplitUsernames] = useState<string[]>(['', '']);
@@ -111,9 +111,10 @@ export default function FeedPage() {
   const [isSplitting, setIsSplitting] = useState(false);
 
   const getSeverityXP = (severity: string) => {
-    if (severity === 'critical' || severity === 'high') return 200;
-    if (severity === 'severe' || severity === 'moderate' || severity === 'medium') return 100;
-    return 50;
+    if (severity === 'critical' || severity === 'high') return 50;
+    if (severity === 'severe') return 40;
+    if (severity === 'moderate' || severity === 'medium') return 30;
+    return 20;
   };
 
   const resetOrganise = () => {
@@ -310,18 +311,11 @@ export default function FeedPage() {
         }
         
         try {
-          await supabase.from('reports').update({ cleanup_image_base64: imageUrl, status: 'CLEANED' }).eq('id', id);
-          
           const post = feed.find(p => p.id === id) || cachedFeed?.find(p => p.id === id);
           const severity = post?.severity || 'light';
           
-          if (severity === 'critical' || severity === 'high' || severity === 'severe' || severity === 'moderate' || severity === 'medium') {
-            setSplitModalData({ id, severity });
-            setSplitStep(1);
-          } else {
-            const { data: user } = await supabase.from('users').select('xp').eq('name', getCurrentUser()).single();
-            if (user) await supabase.from('users').update({ xp: user.xp + 50 }).eq('name', getCurrentUser());
-          }
+          setSplitModalData({ id, severity, imageUrl });
+          setSplitStep(1);
         } catch (e) {
           console.warn("Network failed", e);
         }
@@ -342,58 +336,53 @@ export default function FeedPage() {
     setSplitError("");
     
     try {
-      const totalXP = getSeverityXP(splitModalData!.severity);
+      let squad = [getCurrentUser()];
       
-      if (isSolo) {
-        const { data: me } = await supabase.from('users').select('xp').eq('name', getCurrentUser()).single();
-        if (me) await supabase.from('users').update({ xp: (me.xp || 0) + totalXP }).eq('name', getCurrentUser());
-      } else {
+      if (!isSolo) {
         const validUsernames = splitUsernames.map(u => u.trim().toLowerCase()).filter(u => u.length > 0);
         const uniqueUsernames = Array.from(new Set(validUsernames));
         
         if (uniqueUsernames.length > 0) {
-          const { data: users, error } = await supabase.from('users').select('name, xp').in('name', uniqueUsernames);
+          const { data: users, error } = await supabase.from('users').select('name').in('name', uniqueUsernames);
           if (error || !users || users.length !== uniqueUsernames.length) {
              setSplitError("One or more usernames do not exist! Please check the usernames and try again.");
              setIsSplitting(false);
              return;
           }
-          
-          const perPerson = Math.floor(totalXP / (uniqueUsernames.length + 1));
-          
-          for (const u of users) {
-            await supabase.from('users').update({ xp: (u.xp || 0) + perPerson }).eq('name', u.name);
-          }
-          
-          const { data: me } = await supabase.from('users').select('xp').eq('name', getCurrentUser()).single();
-          if (me) await supabase.from('users').update({ xp: (me.xp || 0) + perPerson }).eq('name', getCurrentUser());
-        } else {
-          // Fallback to solo if they entered nobody
-          const { data: me } = await supabase.from('users').select('xp').eq('name', getCurrentUser()).single();
-          if (me) await supabase.from('users').update({ xp: (me.xp || 0) + totalXP }).eq('name', getCurrentUser());
+          squad = [getCurrentUser(), ...users.map(u => u.name)];
         }
       }
+      
+      // Update under review status
+      await supabase.from('reports').update({ 
+        cleanup_image_base64: splitModalData!.imageUrl, 
+        status: 'UNDER_REVIEW',
+        cleanup_squad: squad,
+        cleanup_timestamp: new Date().toISOString()
+      }).eq('id', splitModalData!.id);
       
       setSplitModalData(null);
       setSplitUsernames(['', '']);
       setSplitCount(2);
+      
+      alert("Cleanup submitted! Verification can take up to 1 hour. XP will be distributed once verified.");
       
       // Refresh feed
       const { data } = await supabase.from('reports').select('*').order('timestamp', { ascending: false });
       if (data) setFeed(data);
       
     } catch (e) {
-      setSplitError("Failed to claim points. Please try again.");
+      setSplitError("Failed to submit cleanup. Please try again.");
     } finally {
       setIsSplitting(false);
     }
   };
 
   const timeAgo = (dateStr: string) => {
-    // Append 'Z' to SQLite datetime string so JS treats it as UTC, not local time
-    const dateStrWithZ = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
-    const seconds = Math.floor((new Date().getTime() - new Date(dateStrWithZ).getTime()) / 1000);
-    if (seconds < 60) return `${seconds}s ago`;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "Unknown time";
+    const seconds = Math.floor((new Date().getTime() - d.getTime()) / 1000);
+    if (seconds < 60) return `${Math.max(0, seconds)}s ago`;
     const minutes = Math.floor(seconds / 60);
     if (minutes < 60) return `${minutes}m ago`;
     const hours = Math.floor(minutes / 60);
@@ -783,7 +772,7 @@ export default function FeedPage() {
               <h2 className="text-2xl font-black text-white text-center mb-2">Threat Neutralised!</h2>
               <p className="text-zinc-400 text-center text-sm mb-6 font-semibold">
                 You eliminated a <span className={splitModalData.severity.includes('critical') ? "text-[#ff4d6d]" : "text-[#ff7f50]"}>{splitModalData.severity.toUpperCase()}</span> hazard. 
-                <br/><span className="text-[#d4af37] text-lg font-black mt-2 inline-block">+{getSeverityXP(splitModalData.severity)} XP</span> Available
+                <br/><span className="text-[#d4af37] text-lg font-black mt-2 inline-block">Up to {getSeverityXP(splitModalData.severity) * (splitModalData.severity.includes('critical') ? 2 : 1)} XP</span> Available upon verification!
               </p>
 
               {splitStep === 1 ? (
@@ -793,7 +782,7 @@ export default function FeedPage() {
                     disabled={isSplitting}
                     className="w-full py-4 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold transition-all shadow-md"
                   >
-                    Claim Solo (+{getSeverityXP(splitModalData.severity)} XP)
+                    Submit Solo Claim
                   </button>
                   <button 
                     onClick={() => setSplitStep(2)}

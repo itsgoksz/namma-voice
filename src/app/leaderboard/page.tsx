@@ -39,7 +39,7 @@ export default function LeaderboardPage() {
           reportsData.forEach(r => {
             let area = "Unknown";
             if (r.lat >= 12.92 && r.lat <= 12.94 && r.lng >= 77.57 && r.lng <= 77.60) area = "Jayanagar";
-            else if (r.lat >= 12.90 && r.lat <= 12.92 && r.lng >= 77.57 && r.lng <= 77.60) area = "JP Nagar";
+            else if (r.lat >= 12.87 && r.lat <= 12.92 && r.lng >= 77.55 && r.lng <= 77.60) area = "JP Nagar";
             else if (r.lat >= 12.90 && r.lat <= 12.92 && r.lng >= 77.60 && r.lng <= 77.62) area = "BTM Layout";
             
             if (area !== "Unknown") {

@@ -14,10 +14,10 @@ import { LatLngBoundsExpression } from "leaflet";
 const center: [number, number] = [12.9000, 77.5850];
 
 // Allowed bounds: South West [lat, lng] to North East [lat, lng]
-// Covers JP Nagar, Jayanagar, and BTM Layout
+// Strictly covers JP Nagar, Jayanagar, and BTM Layout
 const allowedBounds: LatLngBoundsExpression = [
-  [12.880, 77.550], // South West 
-  [12.950, 77.630]  // North East
+  [12.865, 77.550], // South West 
+  [12.945, 77.625]  // North East
 ];
 
 interface Hotspot {
@@ -49,15 +49,28 @@ function LocationTracker({ loc }: { loc?: { lat: number; lng: number } | null })
 
 export default function GarbageMap({ userLoc }: GarbageMapProps) {
   const [hotspots, setHotspots] = useState<Hotspot[]>(cachedHotspots || []);
+  const [guardian, setGuardian] = useState<string>("Loading...");
 
   useEffect(() => {
     const fetchReports = async () => {
       try {
         const { data, error } = await supabase.from('reports').select('*');
         if (error || !data) return;
-        const formattedData = data.map((r: any) => ({ ...r, pos: [r.lat, r.lng] }));
+        const formattedData = data.map((r: any) => ({ 
+          ...r, 
+          pos: [
+            r.lat + (Math.random() - 0.5) * 0.0002, 
+            r.lng + (Math.random() - 0.5) * 0.0002
+          ] 
+        }));
         cachedHotspots = formattedData;
         setHotspots(formattedData);
+        
+        // Fetch guardian
+        const { data: users } = await supabase.from('users').select('name, xp').order('xp', { ascending: false }).limit(1);
+        if (users && users.length > 0) {
+          setGuardian(users[0].name);
+        }
       } catch (e) {
         console.error("Failed to fetch reports", e);
       }
@@ -115,8 +128,9 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
           chunkedLoading
           spiderfyOnMaxZoom={false}
           showCoverageOnHover={false}
-          maxClusterRadius={50}
-          zoomToBoundsOnClick={false}
+          maxClusterRadius={40}
+          zoomToBoundsOnClick={true}
+          disableClusteringAtZoom={17}
           iconCreateFunction={(cluster: any) => {
             const count = cluster.getChildCount();
             const size = Math.max(50, Math.min(70, count * 3 + 40));
@@ -138,29 +152,49 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
           }}
         >
           {hotspots.map((spot) => {
-            const isCritical = spot.severity === 'critical' || spot.severity === 'high' || spot.severity === 'severe';
-            const isModerate = spot.severity === 'moderate' || spot.severity === 'medium';
-            
-            const color = isCritical ? '#990000' : isModerate ? '#ff3333' : '#ff7f50';
-            const glowColor = isCritical ? '#ff0000' : isModerate ? '#ff6666' : '#ffd700';
-            
-            const size = isCritical ? 56 : isModerate ? 48 : 40;
-            
-            const biohazardSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size/2}" height="${size/2}" viewBox="0 0 24 24" fill="none" stroke="${glowColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M12 10a2 2 0 0 0-2-2c-1.7 0-3-1.6-3-3.2A3 3 0 0 1 10 2h4a3 3 0 0 1 3 2.8c0 1.6-1.3 3.2-3 3.2a2 2 0 0 0-2 2z"/><path d="M10 14a2 2 0 0 0 2 2c1.7 0 3 1.6 3 3.2A3 3 0 0 1 12 22H8a3 3 0 0 1-3-2.8c0-1.6 1.3-3.2 3-3.2a2 2 0 0 0 2-2z"/><path d="M14 14a2 2 0 0 1-2 2c-1.7 0-3 1.6-3 3.2A3 3 0 0 0 12 22h4a3 3 0 0 0 3-2.8c0-1.6-1.3-3.2-3-3.2a2 2 0 0 1 2-2z"/></svg>`;
-            
-            const alertSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size/2}" height="${size/2}" viewBox="0 0 24 24" fill="none" stroke="${glowColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
-            
-            const trashSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size/2}" height="${size/2}" viewBox="0 0 24 24" fill="none" stroke="${glowColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
+            let level = 1;
+            let color = '#f59e0b'; // Yellow/Orange
+            let glowColor = '#d97706';
+            let iconSvg = '';
+            let size = 44;
 
-            const iconHtml = isCritical ? biohazardSvg : isModerate ? alertSvg : trashSvg;
-
+            if (spot.severity === 'critical') {
+              level = 4;
+              color = '#800000'; // Dark Maroon
+              glowColor = '#4a0404';
+              iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z"/><circle cx="15" cy="9" r="2"/><circle cx="9" cy="9" r="2"/></svg>`;
+              size = 64;
+            } else if (spot.severity === 'severe' || spot.severity === 'high') {
+              level = 3;
+              color = '#ff0000'; // Bright proper red
+              glowColor = '#cc0000';
+              iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21h16l-2-10H6L4 21z"/><path d="M7 11V8a1 1 0 0 1 1-1h1"/><path d="M11 11V6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M17 11V9a1 1 0 0 0-1-1h-1"/><line x1="8" y1="16" x2="16" y2="16"/></svg>`;
+              size = 56;
+            } else if (spot.severity === 'moderate' || spot.severity === 'medium') {
+              level = 2;
+              color = '#ff7f50'; // Coral
+              glowColor = '#ff6347'; // Tomato (Coral glow)
+              iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+              size = 50;
+            } else {
+              iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
+            }
+            
             const customIcon = L.divIcon({
               className: 'custom-div-icon',
               html: `
-                <div class="relative flex items-center justify-center" style="width: ${size}px; height: ${size}px;">
-                  <div class="absolute inset-0 rounded-full opacity-30 animate-pulse" style="background-color: ${color};"></div>
-                  <div class="absolute inset-1 rounded-full border-2 flex items-center justify-center bg-black/60 backdrop-blur-sm" style="border-color: ${glowColor}; box-shadow: 0 0 15px ${glowColor};">
-                    ${iconHtml}
+                <div class="relative flex items-center justify-center transition-transform hover:scale-110" style="width: ${size}px; height: ${size}px; color: ${color};">
+                  <!-- Toxic Aura -->
+                  <div class="absolute inset-0 rounded-full opacity-50 animate-ping" style="background-color: ${glowColor}; animation-duration: 2.5s;"></div>
+                  
+                  <!-- Solid Token Base -->
+                  <div class="absolute inset-1 rounded-full border-[3px] flex items-center justify-center bg-gradient-to-b from-zinc-900 to-black shadow-lg" style="border-color: ${glowColor}; box-shadow: 0 0 15px ${glowColor}, inset 0 0 10px ${glowColor};">
+                     ${iconSvg}
+                  </div>
+                  
+                  <!-- Level Badge (Game Style) -->
+                  <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-black border-2 flex items-center justify-center font-black text-[9px] text-white z-10" style="border-color: ${glowColor}; box-shadow: 0 0 8px ${glowColor}">
+                    L${level}
                   </div>
                 </div>
               `,
@@ -190,9 +224,18 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
       </MapContainer>
 
       <div className="absolute bottom-6 left-4 z-[400] glass-panel p-4 bg-[rgba(13,27,10,0.95)] shadow-[0_0_15px_rgba(0,0,0,0.8)] border border-[#10b981]/20 rounded-2xl">
-        <h3 className="text-white font-bold text-lg leading-tight">J.P. Nagar</h3>
-        {/* <p className="text-zinc-400 text-xs mb-1 font-semibold">Phases 1-9 locked</p> */}
-        <p className="text-[#ff4d6d] font-black text-sm">{hotspots.length} reports live</p>
+        <h3 className="text-white font-bold text-lg leading-tight">South Bengaluru</h3>
+        <p className="text-[#ff4d6d] font-black text-xs mb-2">{hotspots.length} reports live</p>
+        
+        <div className="bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-lg p-2 flex items-center gap-2">
+          <div className="w-6 h-6 rounded-full bg-[#d4af37] flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>
+          </div>
+          <div>
+            <p className="text-[10px] text-[#d4af37] font-bold uppercase tracking-widest leading-none">Sector Guardian</p>
+            <p className="text-white font-black text-sm leading-none mt-1">@{guardian}</p>
+          </div>
+        </div>
       </div>
 
       {/* Border Overlay perfectly overlaying the map */}
