@@ -19,6 +19,7 @@ export default function LeaderboardPage() {
   const [leaders, setLeaders] = useState<User[]>([]);
   const [areaStats, setAreaStats] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"users" | "areas">("users");
+  const [loading, setLoading] = useState(true);
   const currentUser = getCurrentUser();
 
   useEffect(() => {
@@ -51,6 +52,8 @@ export default function LeaderboardPage() {
         }
       } catch (e) {
         console.error("Failed to fetch leaderboard data", e);
+      } finally {
+        setLoading(false);
       }
     };
     fetchData();
@@ -62,7 +65,7 @@ export default function LeaderboardPage() {
   const rest = leaders.slice(3);
 
   return (
-    <div className="p-4 space-y-6 h-full overflow-hidden flex flex-col pt-8 pb-32 max-w-md mx-auto relative z-10">
+    <div className="p-4 space-y-6 h-full overflow-hidden flex flex-col pt-[calc(env(safe-area-inset-top)+2rem)] pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -74,19 +77,28 @@ export default function LeaderboardPage() {
       <div className="flex space-x-2 w-full mt-2">
         <button 
           onClick={() => setActiveTab('users')} 
-          className={cn("flex-1 py-2.5 rounded-2xl font-bold text-sm transition-all", activeTab === 'users' ? 'bg-[#10b981] text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-white/5 text-zinc-400')}
+          className={cn("flex-1 py-2.5 rounded-2xl font-bold text-sm transition-all active:scale-95", activeTab === 'users' ? 'bg-[#10b981] text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-white/5 text-zinc-400')}
         >
           Top Users
         </button>
         <button 
           onClick={() => setActiveTab('areas')} 
-          className={cn("flex-1 py-2.5 rounded-2xl font-bold text-sm transition-all", activeTab === 'areas' ? 'bg-[#10b981] text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-white/5 text-zinc-400')}
+          className={cn("flex-1 py-2.5 rounded-2xl font-bold text-sm transition-all active:scale-95", activeTab === 'areas' ? 'bg-[#10b981] text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-white/5 text-zinc-400')}
         >
           Area Standings
         </button>
       </div>
 
-      {activeTab === 'users' ? (
+      {loading ? (
+        <div className="flex flex-col space-y-4 mt-8 flex-1">
+          <div className="h-48 w-full bg-white/5 animate-pulse rounded-3xl" />
+          <div className="glass-panel rounded-3xl flex-1 p-4 space-y-4 border border-[#10b981]/20">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-16 w-full bg-white/5 animate-pulse rounded-2xl" />
+            ))}
+          </div>
+        </div>
+      ) : activeTab === 'users' ? (
         <>
           {/* Top 3 Podium */}
       {leaders.length >= 3 && (
@@ -169,7 +181,7 @@ export default function LeaderboardPage() {
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-1.5 bg-[#10b981]/5 px-3 py-1 rounded-full border border-[#10b981]/20">
                   <span className="font-black text-white text-sm">{user.xp}</span>
-                  <span className="text-[10px] font-bold text-[#d4af37] uppercase tracking-wider">Eco XP</span>
+                  <span className="text-xs font-bold text-white/70 uppercase tracking-wider">Eco XP</span>
                 </div>
                 {rank < 4 ? <TrendingUp className="text-zinc-400 w-4 h-4" /> : rank > 7 ? <TrendingDown className="text-zinc-400 w-4 h-4" /> : <Minus className="text-zinc-400 w-4 h-4" />}
               </div>

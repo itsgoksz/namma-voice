@@ -147,7 +147,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 md:p-8 overflow-y-auto pb-32">
+    <div className="min-h-screen bg-black text-white p-4 md:p-8 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+8rem)]">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <h1 className="text-3xl font-black flex items-center gap-3">
@@ -182,11 +182,11 @@ export default function AdminPage() {
 
                 <div className="grid grid-cols-2 gap-2 mb-4 flex-1">
                   <div>
-                    <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Before</p>
+                    <p className="text-xs text-zinc-500 uppercase font-bold mb-1">Before</p>
                     <img src={getImageUrl(report.image_base64)} alt="Before" className="w-full h-32 object-cover rounded-xl" crossOrigin="anonymous" />
                   </div>
                   <div>
-                    <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">After</p>
+                    <p className="text-xs text-zinc-500 uppercase font-bold mb-1">After</p>
                     <img src={getImageUrl(report.cleanup_image_base64)} alt="After" className="w-full h-32 object-cover rounded-xl border-2 border-[#10b981]/50" crossOrigin="anonymous" />
                   </div>
                 </div>
@@ -195,14 +195,14 @@ export default function AdminPage() {
                   <button 
                     onClick={() => handleReject(report)}
                     disabled={actionLoading === report.id}
-                    className="flex-1 py-3 rounded-xl bg-[#ff4d6d]/10 hover:bg-[#ff4d6d]/20 text-[#ff4d6d] font-bold flex items-center justify-center gap-2 border border-[#ff4d6d]/20 transition-colors"
+                    className="flex-1 py-3 rounded-xl bg-[#ff4d6d]/10 hover:bg-[#ff4d6d]/20 text-[#ff4d6d] font-bold flex items-center justify-center gap-2 border border-[#ff4d6d]/20 transition-all active:scale-95"
                   >
                     <XCircle className="w-5 h-5" /> Reject
                   </button>
                   <button 
                     onClick={() => handleApprove(report)}
                     disabled={actionLoading === report.id}
-                    className="flex-[2] py-3 rounded-xl bg-[#10b981] hover:bg-[#10b981]/90 text-black font-black flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-colors"
+                    className="flex-[2] py-3 rounded-xl bg-[#10b981] hover:bg-[#10b981]/90 text-black font-black flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all active:scale-95"
                   >
                     <CheckCircle2 className="w-5 h-5" /> Approve & Distribute
                   </button>

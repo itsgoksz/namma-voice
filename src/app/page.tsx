@@ -161,20 +161,12 @@ export default function Home() {
   };
 
   return (
-    <div className="relative h-full overflow-hidden w-full flex flex-col px-4 pt-6 pb-32 space-y-4">
+    <div className="relative h-full overflow-hidden w-full flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+8rem)] space-y-4">
       {/* Header & Streak Overlay */}
-      <div className="flex justify-between items-start z-10">
+      <div className="flex justify-between items-start z-10 pr-24">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold text-white tracking-tight">Discover</h1>
           <p className="text-zinc-400 text-sm font-semibold mt-1">Today's Missions</p>
-        </motion.div>
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.8 }} 
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-[#10b981]/10 border border-[#10b981]/20 px-3 py-1.5 rounded-full flex items-center shadow-lg backdrop-blur-sm"
-        >
-          <Flame className="w-4 h-4 text-[#ff9f1c] mr-1.5 fill-current" />
-          <span className="text-white font-bold text-sm">{streak} Day Streak</span>
         </motion.div>
       </div>
 
@@ -207,7 +199,7 @@ export default function Home() {
           <button
             onClick={handleClaim}
             disabled={isClaimed}
-            className={`w-full mt-4 py-2 rounded-xl font-black text-sm flex items-center justify-center space-x-2 transition-all ${isClaimed ? 'bg-[#10b981]/20 text-[#10b981]' : 'bg-[#d4af37] text-black hover:bg-[#d4af37]/90'}`}
+            className={`w-full mt-4 py-2 rounded-xl font-black text-sm flex items-center justify-center space-x-2 transition-all active:scale-95 ${isClaimed ? 'bg-[#10b981]/20 text-[#10b981]' : 'bg-[#d4af37] text-black hover:bg-[#d4af37]/90'}`}
           >
             {isClaimed ? (
               <>
@@ -247,7 +239,7 @@ export default function Home() {
               </button>
               <div className="flex items-center space-x-2 mb-2 pr-6">
                 <div className="w-2 h-2 bg-[#ff4d6d] rounded-full animate-ping" />
-                <p className="text-[#ff4d6d] font-black text-[10px] uppercase tracking-widest">Mission Available</p>
+                <p className="text-[#ff4d6d]/70 font-black text-xs uppercase tracking-widest">Mission Available</p>
               </div>
               <div className="flex justify-between items-end mb-3">
                 <div>

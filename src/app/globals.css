@@ -4,8 +4,8 @@
 :root {
   --background: #080808;
   --foreground: #ffffff;
-  --coral: #10b981;
-  --coral-dim: rgba(16, 185, 129, 0.2);
+  --brand-emerald: #10b981;
+  --brand-emerald-dim: rgba(16, 185, 129, 0.2);
   --card-bg: rgba(16, 185, 129, 0.1);
   --card-border: rgba(255, 255, 255, 0.1);
   --text-secondary: #a1a1aa;
@@ -14,8 +14,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-neon: var(--coral);
-  --color-neon-dim: var(--coral-dim);
+  --color-neon: var(--brand-emerald);
+  --color-neon-dim: var(--brand-emerald-dim);
   --color-card-bg: var(--card-bg);
   --color-card-border: var(--card-border);
   --color-text-secondary: var(--text-secondary);
@@ -34,6 +34,7 @@ body {
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--card-border);
   border-radius: 1.5rem; /* 24px */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .glass-nav {
@@ -44,15 +45,15 @@ body {
 }
 
 .text-neon {
-  color: var(--coral);
+  color: var(--brand-emerald);
 }
 
 .bg-neon {
-  background-color: var(--coral);
+  background-color: var(--brand-emerald);
 }
 
 .shadow-neon {
-  box-shadow: 0 0 25px var(--coral);
+  box-shadow: 0 0 25px var(--brand-emerald);
 }
 
 /* Starfield Effect CSS */

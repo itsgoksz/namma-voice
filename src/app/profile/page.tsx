@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Award, Flame, MapPin, Zap, Info } from "lucide-react";
+import { ProgressionTree } from "@/components/ProgressionTree";
 import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
@@ -18,7 +19,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     getUserStreak(getCurrentUser()).then(setStreak);
-    
+
     // Check cache first for instant load
     const cachedLocName = localStorage.getItem('namma_loc_name');
     if (cachedLocName) setLocationName(cachedLocName);
@@ -57,7 +58,7 @@ export default function ProfilePage() {
   }, []);
 
   const nextLevelXp = user.level * 50;
-  const progress = Math.min(100, Math.max(0, (user.xp / nextLevelXp) * 100));
+  const progress = user ? (user.xp / nextLevelXp) * 100 : 0;
 
   const badges = [
     { name: "Explorer", icon: "🗺️", unlocked: user.reports_count >= 1, req: "Make your first report." },
@@ -70,20 +71,22 @@ export default function ProfilePage() {
     { name: "Legend", icon: "👑", unlocked: user.level >= 20, req: "Reach Level 20." },
   ];
 
+  const currentBadgeIndex = badges.map(b => b.unlocked).lastIndexOf(true);
+
   if (loading) return null;
 
   return (
-    <div className="p-4 space-y-6 h-full overflow-y-auto pt-8 pb-32 max-w-md mx-auto relative z-10">
+    <div className="p-4 space-y-6 h-full overflow-y-auto pt-[calc(env(safe-area-inset-top)+2rem)] pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
       <AnimatePresence>
         {badgeMessage && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setBadgeMessage(null)}
             className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000]/80 px-6 backdrop-blur-sm"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
@@ -92,9 +95,9 @@ export default function ProfilePage() {
               <Info className="w-10 h-10 text-zinc-400 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-white mb-2">{badgeMessage.title}</h3>
               <p className="text-zinc-400 font-medium">{badgeMessage.text}</p>
-              <button 
+              <button
                 onClick={() => setBadgeMessage(null)}
-                className="mt-6 bg-[#10b981]/5 hover:bg-[#10b981]/60 text-white px-6 py-2 rounded-full font-semibold transition-colors"
+                className="mt-6 bg-[#10b981]/5 hover:bg-[#10b981]/60 text-white px-6 py-2 rounded-full font-semibold transition-colors active:scale-95"
               >
                 Got it
               </button>
@@ -103,7 +106,7 @@ export default function ProfilePage() {
         )}
       </AnimatePresence>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col items-start justify-center mt-2 space-y-1"
@@ -117,33 +120,16 @@ export default function ProfilePage() {
         </div>
       </motion.div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1 }}
-        className="glass-panel p-5 rounded-3xl mt-6 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-xl"
+        className="glass-panel p-5 rounded-3xl mt-6 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-xl flex justify-center overflow-hidden"
       >
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-white">Level {user.level}</h2>
-          <div className="flex items-center space-x-1">
-            <Zap className="w-5 h-5 text-zinc-400 fill-current" />
-            <span className="text-xl font-black text-[#d4af37]">{user.xp} Eco XP</span>
-          </div>
-        </div>
-        <div className="w-full bg-[#10b981]/5 rounded-full h-3 mb-2 relative overflow-hidden">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 1, delay: 0.3 }}
-            className="bg-white h-3 rounded-full absolute left-0 top-0 shadow-none"
-          ></motion.div>
-        </div>
-        <p className="text-right text-xs text-zinc-400 font-bold uppercase tracking-wider">
-          {nextLevelXp - user.xp} ECO XP TO LEVEL {user.level + 1}
-        </p>
+        <ProgressionTree level={user.level} xp={user.xp} nextLevelXp={nextLevelXp} />
       </motion.div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
@@ -153,45 +139,76 @@ export default function ProfilePage() {
           <div className="glass-panel p-5 rounded-3xl border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-xl">
             <Flame className="w-6 h-6 text-[#ff9f1c] mb-3" />
             <p className="text-3xl font-black text-white">{streak}</p>
-            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-1">Day Streak</p>
+            <p className="text-xs text-white/70 font-bold uppercase tracking-widest mt-1">Day Streak</p>
           </div>
           <div className="glass-panel p-5 rounded-3xl border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-xl">
             <Award className="w-6 h-6 text-[#3a86ff] mb-3" />
             <p className="text-3xl font-black text-white">{user.reports_count}</p>
-            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-1">Total Reports</p>
+            <p className="text-xs text-white/70 font-bold uppercase tracking-widest mt-1">Total Reports</p>
           </div>
         </div>
       </motion.div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <h3 className="text-xl font-bold text-[#d4af37] mb-4">Badges</h3>
-        <div className="grid grid-cols-3 gap-3">
-          {badges.map((badge, i) => (
-            <motion.div 
-              key={i}
-              onClick={() => {
-                if (!badge.unlocked) {
-                  setBadgeMessage({ title: `Locked: ${badge.name}`, text: badge.req });
-                }
-              }}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4 + i * 0.05 }}
-              className={cn(
-                "flex flex-col items-center justify-center p-3 rounded-2xl transition-all border",
-                badge.unlocked 
-                  ? "bg-[#10b981]/10 border-[#10b981]/20 opacity-100" 
-                  : "bg-[#10b981]/5 border-transparent opacity-40 grayscale cursor-pointer hover:opacity-60"
+        <h3 className="text-xl font-bold text-[#d4af37] mb-4">Badge Timeline</h3>
+
+        <div className="relative flex items-center justify-center py-4 overflow-hidden w-full max-w-sm mx-auto">
+          <div className="flex items-center space-x-2 z-10 w-full px-4 relative">
+
+            {/* Previous Badge */}
+            <div className="flex-1 flex justify-center">
+              {currentBadgeIndex > 0 ? (
+                <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#10b981]/5 border border-[#10b981]/10 opacity-60 scale-90 w-full max-w-[80px]">
+                  <span className="text-2xl mb-1 filter drop-shadow-md">{badges[currentBadgeIndex - 1].icon}</span>
+                  <p className="text-[10px] font-bold text-center text-white/70 truncate w-full">{badges[currentBadgeIndex - 1].name}</p>
+                </div>
+              ) : (
+                <div className="w-full max-w-[80px]" /> /* Empty placeholder to keep center aligned */
               )}
-            >
-              <span className="text-3xl mb-2 filter drop-shadow-md">{badge.icon}</span>
-              <p className="text-[10px] font-bold text-center text-zinc-400">{badge.name}</p>
-            </motion.div>
-          ))}
+            </div>
+
+            {/* Current Badge */}
+            <div className="flex-1 flex justify-center relative">
+              {currentBadgeIndex >= 0 ? (
+                <div className="flex flex-col items-center justify-center p-4 rounded-3xl bg-[#10b981]/20 border border-[#10b981]/40 shadow-[0_0_30px_rgba(16,185,129,0.3)] scale-110 z-20 w-full max-w-[100px]">
+                  <div className="absolute inset-0 bg-[#10b981] opacity-20 blur-xl rounded-full" />
+                  <span className="text-4xl mb-2 filter drop-shadow-lg relative z-10">{badges[currentBadgeIndex].icon}</span>
+                  <p className="text-xs font-black text-center text-white relative z-10 truncate w-full">{badges[currentBadgeIndex].name}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-4 rounded-3xl bg-white/5 border border-white/10 opacity-50 z-20 w-full max-w-[100px]">
+                  <span className="text-2xl mb-2 text-zinc-500">?</span>
+                  <p className="text-[10px] font-bold text-center text-zinc-500">No Badges</p>
+                </div>
+              )}
+            </div>
+
+            {/* Next Badge */}
+            <div className="flex-1 flex justify-center flex-col items-center">
+              {currentBadgeIndex < badges.length - 1 ? (
+                <div
+                  onClick={() => setBadgeMessage({ title: `Locked: ${badges[currentBadgeIndex + 1].name}`, text: badges[currentBadgeIndex + 1].req })}
+                  className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 border border-transparent opacity-40 grayscale scale-90 cursor-pointer w-full max-w-[80px] hover:opacity-60 transition-opacity"
+                >
+                  <span className="text-2xl mb-1 filter drop-shadow-md">{badges[currentBadgeIndex + 1].icon}</span>
+                  <p className="text-[10px] font-bold text-center text-white/70 truncate w-full">Locked</p>
+                </div>
+              ) : (
+                <div className="w-full max-w-[80px]" />
+              )}
+            </div>
+
+            {/* Indicator for more badges */}
+            {currentBadgeIndex < badges.length - 2 && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 font-bold tracking-widest text-lg">
+                •••
+              </div>
+            )}
+          </div>
         </div>
       </motion.div>
     </div>

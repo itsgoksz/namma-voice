@@ -391,7 +391,7 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="p-4 space-y-6 h-full overflow-y-auto flex flex-col pt-8 pb-32 max-w-md mx-auto relative z-10">
+    <div className="p-4 space-y-6 h-full overflow-y-auto flex flex-col pt-[calc(env(safe-area-inset-top)+2rem)] pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -402,8 +402,10 @@ export default function FeedPage() {
       </motion.div>
 
       {loading && feed.length === 0 ? (
-        <div className="flex justify-center items-center h-32">
-          <div className="w-8 h-8 border-4 border-[#10b981]/20 border-t-transparent rounded-full animate-spin" />
+        <div className="space-y-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="glass-panel rounded-3xl h-[400px] w-full bg-white/5 animate-pulse border border-[#10b981]/20" />
+          ))}
         </div>
       ) : feed.length === 0 ? (
         <div className="glass-panel p-8 rounded-3xl text-center border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
@@ -429,7 +431,7 @@ export default function FeedPage() {
                   </div>
                   <div>
                     <p className="text-white font-bold text-sm">{post.username}</p>
-                    <div className="flex items-center space-x-1 text-[10px] text-zinc-400">
+                    <div className="flex items-center space-x-1 text-xs text-white/70">
                       <Clock className="w-3 h-3" />
                       <span>{timeAgo(post.timestamp)}</span>
                     </div>
@@ -461,11 +463,11 @@ export default function FeedPage() {
                   <div className="grid grid-cols-2">
                     <div className="aspect-square relative">
                       <img src={getImageUrl(post.image_base64)} alt="Before" className="w-full h-full object-cover" crossOrigin="anonymous" />
-                      <div className="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded text-[10px] font-bold text-white tracking-widest uppercase">Before</div>
+                      <div className="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded text-xs font-bold text-white tracking-widest uppercase">Before</div>
                     </div>
                     <div className="aspect-square relative border-l border-[#10b981]/20">
                       <img src={getImageUrl(post.cleanup_image_base64)} alt="After" className="w-full h-full object-cover" crossOrigin="anonymous" />
-                      <div className="absolute top-2 left-2 bg-[#2E6F40]/80 px-2 py-1 rounded text-[10px] font-bold text-white tracking-widest uppercase">Cleaned</div>
+                      <div className="absolute top-2 left-2 bg-[#2E6F40]/80 px-2 py-1 rounded text-xs font-bold text-white tracking-widest uppercase">Cleaned</div>
                     </div>
                   </div>
                 ) : (
@@ -545,7 +547,7 @@ export default function FeedPage() {
                   <button 
                     onClick={(e) => handleCleanup(e, post.id)}
                     disabled={isCleaningUp === post.id}
-                    className="w-full bg-[#d4af37] hover:bg-[#d4af37]/80 text-[#050505] font-black py-3 rounded-xl transition-colors shadow-[0_0_20px_rgba(212,175,55,0.4)] flex items-center justify-center space-x-2 disabled:opacity-50"
+                    className="w-full bg-[#d4af37] hover:bg-[#d4af37]/80 text-[#050505] font-black py-3 rounded-xl transition-all active:scale-95 shadow-[0_0_20px_rgba(212,175,55,0.4)] flex items-center justify-center space-x-2 disabled:opacity-50"
                   >
                     {isCleaningUp === post.id ? (
                       <div className="w-5 h-5 border-2 border-[#050505]/30 border-t-[#050505] rounded-full animate-spin" />
@@ -565,7 +567,7 @@ export default function FeedPage() {
 
       <AnimatePresence>
         {activePost && (
-          <div className="fixed inset-0 z-50 flex flex-col items-center justify-start p-4 pt-12 pb-28">
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-start p-4 pt-[calc(env(safe-area-inset-top)+3rem)] pb-[calc(env(safe-area-inset-bottom)+7rem)]">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -583,7 +585,7 @@ export default function FeedPage() {
                   <div className="w-10 h-10 bg-[#10b981]/5 rounded-full flex items-center justify-center text-xl border border-[#10b981]/20">👤</div>
                   <div>
                     <p className="text-white font-bold text-sm">{activePost.username}</p>
-                    <div className="flex items-center space-x-1 text-[10px] text-zinc-400">
+                    <div className="flex items-center space-x-1 text-xs text-white/70">
                       <Clock className="w-3 h-3" />
                       <span>{timeAgo(activePost.timestamp)}</span>
                     </div>
@@ -910,7 +912,7 @@ export default function FeedPage() {
             </div>
 
             {/* Title / Hero */}
-            <div className="relative z-10 px-16 pt-32 pb-16 flex flex-col border-b border-white/5">
+            <div className="relative z-10 px-16 pt-[calc(env(safe-area-inset-top)+8rem)] pb-[calc(env(safe-area-inset-bottom)+4rem)] flex flex-col border-b border-white/5">
               <h1 className="text-white text-[9rem] font-black leading-[0.9] tracking-tight uppercase mb-12">
                 <span className="text-white/80 font-bold text-6xl tracking-wider">Community</span> <br/>
                 <span className="text-[#10b981] drop-shadow-[0_10px_30px_rgba(16,185,129,0.3)]">Cleanup</span>

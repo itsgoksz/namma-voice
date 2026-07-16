@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, Compass, Plus, Trophy, User } from "lucide-react";
+import { Home, Compass, Plus, Trophy, User, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { name: "HOME", href: "/", icon: Home },
-  { name: "COMMUNITY", href: "/feed", icon: Compass },
+  { name: "MAP", href: "/", icon: Home },
+  { name: "FEED", href: "/feed", icon: Compass },
   { name: "ADD", href: "/report", icon: Plus, special: true },
-  { name: "STANDINGS", href: "/leaderboard", icon: Trophy }, // using rank for discover just for demo
+  { name: "RANK", href: "/leaderboard", icon: Trophy },
   { name: "ME", href: "/profile", icon: User },
 ];
 
@@ -18,7 +18,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 z-[9999] bg-[#05110b]/[0.87] backdrop-blur-2xl border border-[#10b981]/20 rounded-[2rem] max-w-md mx-auto h-20 px-2 shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
+    <nav className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-4 right-4 z-[9999] bg-[#05110b]/[0.87] backdrop-blur-2xl border border-[#10b981]/20 rounded-[2rem] max-w-md mx-auto h-20 px-2 shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
       <div className="flex items-center justify-around h-full relative">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -56,7 +56,7 @@ export default function BottomNav() {
                   className={cn("w-5 h-5", isActive ? "stroke-[#10b981]" : "")}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
-                <span className="text-[9px] font-black mt-1.5 tracking-wider">{item.name}</span>
+                <span className="text-xs font-black mt-1.5 tracking-wider">{item.name}</span>
                 {isActive && (
                   <motion.div
                     layoutId="nav-indicator"

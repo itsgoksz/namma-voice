@@ -193,7 +193,7 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
                   </div>
                   
                   <!-- Level Badge (Game Style) -->
-                  <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-black border-2 flex items-center justify-center font-black text-[9px] text-white z-10" style="border-color: ${glowColor}; box-shadow: 0 0 8px ${glowColor}">
+                  <div class="absolute -top-1 -right-1 w-[22px] h-[22px] rounded-full bg-black border-2 flex items-center justify-center font-black text-[11px] text-white z-10" style="border-color: ${glowColor}; box-shadow: 0 0 8px ${glowColor}">
                     L${level}
                   </div>
                 </div>
@@ -214,7 +214,7 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
                       <img src={getImageUrl(spot.image_base64)} alt="Hotspot" className="w-full h-24 object-cover rounded-lg mb-2" crossOrigin="anonymous" />
                     )}
                     <span className="text-zinc-400 text-xl">{spot.reports}</span>
-                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">Active Reports</span>
+                    <span className="text-xs text-slate-500/80 uppercase tracking-widest font-black">Active Reports</span>
                   </div>
                 </Popup>
               </Marker>
@@ -232,7 +232,7 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>
           </div>
           <div>
-            <p className="text-[10px] text-[#d4af37] font-bold uppercase tracking-widest leading-none">Sector Guardian</p>
+            <p className="text-xs text-[#d4af37]/80 font-bold uppercase tracking-widest leading-none">Sector Guardian</p>
             <p className="text-white font-black text-sm leading-none mt-1">@{guardian}</p>
           </div>
         </div>

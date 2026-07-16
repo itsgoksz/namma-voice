@@ -137,7 +137,7 @@ export default function ReportPage() {
   const selectedSeverityObj = SEVERITIES.find(s => s.value === severity);
 
   return (
-    <div className="p-4 space-y-6 h-full overflow-y-auto flex flex-col pt-8 pb-32">
+    <div className="p-4 space-y-6 h-full overflow-y-auto flex flex-col pt-[calc(env(safe-area-inset-top)+2rem)] pb-[calc(env(safe-area-inset-bottom)+8rem)]">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-3xl font-bold text-white tracking-tight">Report Issue</h1>
       </motion.div>
@@ -146,7 +146,7 @@ export default function ReportPage() {
         onClick={!photo ? takePhoto : undefined}
         className={cn(
           "glass-panel rounded-2xl flex flex-col items-center justify-center border transition-all overflow-hidden relative",
-          photo ? "border-[#10b981]/20 h-48 shrink-0" : "border-[#10b981]/20 hover:border-[#10b981]/20 cursor-pointer flex-1 bg-[#10b981]/5 group"
+          photo ? "border-[#10b981]/20 h-48 shrink-0" : "border-[#10b981]/20 hover:border-[#10b981]/20 cursor-pointer flex-1 bg-[#10b981]/5 group active:scale-95"
         )}
       >
         {photo ? (
@@ -154,7 +154,7 @@ export default function ReportPage() {
             <img src={photo} alt="Captured" className="w-full h-full object-cover" />
             <button 
               onClick={(e) => { e.stopPropagation(); takePhoto(); }}
-              className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-xs font-bold border border-[#10b981]/20"
+              className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-xs font-bold border border-[#10b981]/20 active:scale-95 transition-transform"
             >
               Retake
             </button>
@@ -195,7 +195,7 @@ export default function ReportPage() {
                   >
                     <Icon className={cn("w-6 h-6 mb-2", isSelected ? s.color : "text-zinc-400")} />
                     <span className={cn("font-black text-sm", isSelected ? "text-white" : "text-zinc-400")}>{s.label}</span>
-                    <span className="text-[10px] text-zinc-400 font-semibold">{s.desc}</span>
+                    <span className="text-xs text-white/70 font-semibold">{s.desc}</span>
                   </motion.button>
                 );
               })}
