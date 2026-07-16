@@ -229,7 +229,7 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
         
         <div className="bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-lg p-2 flex items-center gap-2">
           <div className="w-6 h-6 rounded-full bg-[#d4af37] flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>
           </div>
           <div>
             <p className="text-[10px] text-[#d4af37] font-bold uppercase tracking-widest leading-none">Sector Guardian</p>

@@ -2,16 +2,13 @@ import { Geolocation } from "@capacitor/geolocation";
 
 export const getFastLocation = async (): Promise<{ lat: number, lng: number }> => {
   return new Promise(async (resolve) => {
-    // 1. Try cache first for instant resolution if we've successfully got it before
+    // Use cached location as fallback instead of hardcoding JP Nagar, if available
+    let fallback = { lat: 12.9063, lng: 77.5857 };
     const cachedLat = localStorage.getItem('namma_lat');
     const cachedLng = localStorage.getItem('namma_lng');
     if (cachedLat && cachedLng) {
-      resolve({ lat: parseFloat(cachedLat), lng: parseFloat(cachedLng) });
-      return;
+      fallback = { lat: parseFloat(cachedLat), lng: parseFloat(cachedLng) };
     }
-
-    // Default JP Nagar
-    const fallback = { lat: 12.9063, lng: 77.5857 };
 
     if (typeof window === 'undefined') {
       resolve(fallback);
