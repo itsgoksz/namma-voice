@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Navigation, Flame, Target, CheckCircle2, X, Info } from "lucide-react";
 import { getCurrentUser } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
-import { Logo } from "@/components/ui/Logo";
 import { getUserStreak } from "@/lib/streak";
 import { getFastLocation } from "@/lib/location";
 import { Geolocation } from "@capacitor/geolocation";
@@ -177,8 +176,7 @@ export default function Home() {
     <div className="relative h-full overflow-hidden w-full flex flex-col px-4 pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] space-y-4">
       <div className="flex justify-between items-start z-10">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="max-w-[calc(100%-150px)]">
-          <div className="flex items-center space-x-4 mb-1">
-            <Logo className="w-16 h-16 shrink-0 text-[#10b981]" />
+          <div className="mb-1">
             <h1 className="text-3xl font-bold text-white tracking-tight leading-tight">Namma<br />Hood</h1>
           </div>
           <p className="text-zinc-400 text-xs font-semibold mt-1">Together, we’re making JP Nagar the cleanest neighborhood.</p>
