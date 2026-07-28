@@ -133,15 +133,14 @@ export default function Home() {
         const { data: feedData, error: feedError } = await supabase.from('reports').select('*').order('timestamp', { ascending: false });
         if (!feedError && feedData) {
           const feed = feedData;
-          const myReports = feed.filter((r: any) => r.username === getCurrentUser());
-          const supportedStr = localStorage.getItem('namma_supported_posts') || '[]';
-          let supportedCount = 0;
-          try { supportedCount = JSON.parse(supportedStr).length; } catch(e) {}
+          const today = new Date().toISOString().split('T')[0];
           
-          const myCleanups = feed.filter((r: any) => r.cleanup_squad?.includes(getCurrentUser()));
+          const myReports = feed.filter((r: any) => r.username === getCurrentUser() && r.timestamp?.startsWith(today));
+          const supportedCount = parseInt(localStorage.getItem(`namma_supported_count_${today}`) || '0');
           
-          const shareStr = localStorage.getItem('namma_share_count') || '0';
-          let shareCount = parseInt(shareStr);
+          const myCleanups = feed.filter((r: any) => r.cleanup_squad?.includes(getCurrentUser()) && (r.cleanup_timestamp?.startsWith(today) || r.timestamp?.startsWith(today)));
+          
+          let shareCount = parseInt(localStorage.getItem(`namma_share_count_${today}`) || '0');
 
           setDailyMissions(prevMissions => {
             const newCompletions: Record<string, boolean> = {};

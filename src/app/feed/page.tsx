@@ -206,6 +206,12 @@ export default function FeedPage() {
       setSupportedPosts(prev => {
         const next = new Set(prev).add(id);
         localStorage.setItem('namma_supported_posts', JSON.stringify(Array.from(next)));
+        
+        const today = new Date().toISOString().split('T')[0];
+        const dailyKey = `namma_supported_count_${today}`;
+        const dailyCount = parseInt(localStorage.getItem(dailyKey) || '0') + 1;
+        localStorage.setItem(dailyKey, dailyCount.toString());
+        
         return next;
       });
       const { data: post } = await supabase.from('reports').select('supports').eq('id', id).single();
@@ -278,6 +284,12 @@ export default function FeedPage() {
         URL.revokeObjectURL(url);
         alert("Poster downloaded! You can now share it manually.");
       }
+      
+      const today = new Date().toISOString().split('T')[0];
+      const dailyKey = `namma_share_count_${today}`;
+      const dailyCount = parseInt(localStorage.getItem(dailyKey) || '0') + 1;
+      localStorage.setItem(dailyKey, dailyCount.toString());
+      
       setSharePost(null);
     } catch (e) {
       console.log('User cancelled share or error:', e);
