@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { seedPaths } from './GoldenSeed';
 
 // Deterministic pseudo-random number generator
 const random = (seed: number) => {
@@ -12,8 +13,9 @@ const random = (seed: number) => {
 export const ProgressionTree = ({ level, xp, nextLevelXp }: { level: number, xp: number, nextLevelXp: number }) => {
   const isMaxLevel = level >= 100;
   
-  // Growth factors (0.0 to 1.0)
-  const growth = Math.min(level, 100) / 100;
+  // Growth factors (0.0 to 1.0), mapped differently for stages
+  // Level 1: 0, Level 10: 0.1, Level 100: 1.0
+  const growth = Math.max(0, Math.min(level - 1, 99)) / 99;
   
   // Procedural Dimensions
   // Soil
@@ -21,9 +23,9 @@ export const ProgressionTree = ({ level, xp, nextLevelXp }: { level: number, xp:
   const soilHeight = 20 + (growth * 20);
   
   // Trunk
-  const treeHeight = 20 + (growth * 220); 
-  const trunkBaseWidth = 4 + (growth * 36);
-  const trunkTopWidth = 2 + (growth * 16);
+  const treeHeight = level < 2 ? 0 : 20 + (growth * 220); 
+  const trunkBaseWidth = level < 2 ? 0 : 4 + (growth * 36);
+  const trunkTopWidth = level < 2 ? 0 : 2 + (growth * 16);
   
   // Canopy (Leaves)
   const canopyRadiusX = 20 + (growth * 120);
@@ -36,27 +38,28 @@ export const ProgressionTree = ({ level, xp, nextLevelXp }: { level: number, xp:
   let leafColors = ['#22c55e', '#16a34a', '#15803d', '#4ade80'];
   let textColor = "text-[#4ade80]";
 
-  if (level < 10) {
+  if (level < 2) {
     stageName = "The Seed";
+    glowColor = "rgba(163,230,53,0.2)";
+    leafColors = ['#84cc16', '#a3e635'];
+    textColor = "text-[#d4af37]"; // Gold color for the seed
+  } else if (level < 10) {
+    stageName = "The Sprout";
     glowColor = "rgba(163,230,53,0.2)";
     leafColors = ['#84cc16', '#a3e635'];
     textColor = "text-[#a3e635]";
   } else if (level < 30) {
-    stageName = "The Sprout";
+    stageName = "The Sapling";
     glowColor = "rgba(74,222,128,0.3)";
     textColor = "text-[#4ade80]";
   } else if (level < 60) {
-    stageName = "The Sapling";
+    stageName = "Young Tree";
     glowColor = "rgba(34,197,94,0.4)";
     textColor = "text-[#22c55e]";
-  } else if (level < 90) {
-    stageName = "Young Tree";
-    glowColor = "rgba(21,128,61,0.5)";
-    textColor = "text-[#16a34a]";
   } else if (level < 100) {
     stageName = "Mature Tree";
-    glowColor = "rgba(21,128,61,0.6)";
-    textColor = "text-[#15803d]";
+    glowColor = "rgba(21,128,61,0.5)";
+    textColor = "text-[#16a34a]";
   } else {
     stageName = "Blooming Tree";
     glowColor = "rgba(236,72,153,0.6)";
@@ -66,9 +69,11 @@ export const ProgressionTree = ({ level, xp, nextLevelXp }: { level: number, xp:
 
   // Generate deterministic leaves
   const leaves = useMemo(() => {
-    const items = [];
+    const items: any[] = [];
+    if (level < 2) return items; // No leaves at Level 1
+
     // Increase number of leaf clusters significantly as it grows
-    const numLeaves = Math.floor(10 + (growth * 150)); 
+    const numLeaves = level < 10 ? Math.floor(1 + (growth * 10)) : Math.floor(10 + (growth * 150)); 
     
     for (let i = 0; i < numLeaves; i++) {
       const r1 = random(level * 100 + i);
@@ -198,7 +203,7 @@ export const ProgressionTree = ({ level, xp, nextLevelXp }: { level: number, xp:
             />
             
             {/* Trunk */}
-            {level >= 3 && (
+            {level >= 10 && (
               <path 
                 d={`M ${200 - trunkBaseWidth/2} 340 
                    Q 195 ${340 - treeHeight/2} ${200 - trunkTopWidth/2} ${340 - treeHeight} 
@@ -209,14 +214,21 @@ export const ProgressionTree = ({ level, xp, nextLevelXp }: { level: number, xp:
               />
             )}
             
-            {/* Seed stage tiny trunk */}
-            {level < 3 && (
+            {/* Seed stage tiny trunk (sprout) */}
+            {level >= 2 && level < 10 && (
                <path 
                 d={`M 198 340 L 200 ${340 - treeHeight} L 202 340 Z`}
                 fill="#84cc16"
                 className="transition-all duration-1000 ease-in-out"
                />
             )}
+
+            {/* Golden Seed embedded in soil */}
+            <g transform="translate(185, 332) scale(0.065) translate(-450, -850)" opacity={level < 10 ? 1 : 0} className="transition-all duration-1000 ease-in-out">
+              {seedPaths.map((d, i) => (
+                <path key={`seed-${i}`} fill="#d4af37" d={d} />
+              ))}
+            </g>
 
             {/* Branches */}
             {branches.map(branch => (
