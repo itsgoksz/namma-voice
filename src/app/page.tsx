@@ -9,6 +9,7 @@ import { Logo } from "@/components/ui/Logo";
 import { getUserStreak } from "@/lib/streak";
 import { getFastLocation } from "@/lib/location";
 import { Geolocation } from "@capacitor/geolocation";
+import { getDailyMissions, Mission } from "@/lib/missions";
 import dynamic from "next/dynamic";
 
 const GarbageMap = dynamic(() => import("@/components/GarbageMap"), {
@@ -53,30 +54,35 @@ export default function Home() {
   
   const [streak, setStreak] = useState(0);
   const [isMissionDismissed, setIsMissionDismissed] = useState(false);
-  const [isScoutClaimed, setIsScoutClaimed] = useState(false);
-  const [isAdvocateClaimed, setIsAdvocateClaimed] = useState(false);
-  const [isCleanerClaimed, setIsCleanerClaimed] = useState(false);
+  const [dailyMissions, setDailyMissions] = useState<Mission[]>([]);
+  const [claims, setClaims] = useState<Record<string, boolean>>({});
+  const [completions, setCompletions] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    setIsScoutClaimed(localStorage.getItem('namma_mission_scout_claimed') === 'true');
-    setIsAdvocateClaimed(localStorage.getItem('namma_mission_advocate_claimed') === 'true');
-    setIsCleanerClaimed(localStorage.getItem('namma_mission_cleaner_claimed') === 'true');
+    const today = new Date().toISOString().split('T')[0];
+    const missions = getDailyMissions(today);
+    setDailyMissions(missions);
+    
+    const initialClaims: Record<string, boolean> = {};
+    missions.forEach(m => {
+      initialClaims[m.id] = localStorage.getItem(`namma_mission_${today}_${m.id}_claimed`) === 'true';
+    });
+    setClaims(initialClaims);
   }, []);
 
-  const claimMission = async (missionKey: string, xpReward: number, setClaimState: any) => {
-    setClaimState(true);
-    localStorage.setItem(`namma_mission_${missionKey}_claimed`, 'true');
+  const claimMission = async (mission: Mission) => {
+    const today = new Date().toISOString().split('T')[0];
+    setClaims(prev => ({ ...prev, [mission.id]: true }));
+    localStorage.setItem(`namma_mission_${today}_${mission.id}_claimed`, 'true');
     try {
       const { data } = await supabase.from('users').select('xp').eq('name', getCurrentUser()).single();
       if (data) {
-        await supabase.from('users').update({ xp: data.xp + xpReward }).eq('name', getCurrentUser());
+        await supabase.from('users').update({ xp: data.xp + mission.xp }).eq('name', getCurrentUser());
       }
     } catch (e) {
       console.error(e);
     }
   };
-  
-  const [objectives, setObjectives] = useState(cachedObjectives);
 
   useEffect(() => {
     let watchId: string;
@@ -133,14 +139,18 @@ export default function Home() {
           try { supportedCount = JSON.parse(supportedStr).length; } catch(e) {}
           
           const myCleanups = feed.filter((r: any) => r.cleanup_squad?.includes(getCurrentUser()));
+          
+          const shareStr = localStorage.getItem('namma_share_count') || '0';
+          let shareCount = parseInt(shareStr);
 
-          const newObjectives = {
-            scout: myReports.length >= 1,
-            advocate: supportedCount >= 3,
-            cleaner: myCleanups.length >= 1
-          };
-          cachedObjectives = newObjectives;
-          setObjectives(newObjectives);
+          setDailyMissions(prevMissions => {
+            const newCompletions: Record<string, boolean> = {};
+            prevMissions.forEach(m => {
+              newCompletions[m.id] = m.evaluate(myReports, supportedCount, myCleanups, shareCount);
+            });
+            setCompletions(newCompletions);
+            return prevMissions;
+          });
         }
       } catch (e) {
         console.error("Failed to load missions", e);
@@ -184,7 +194,7 @@ export default function Home() {
           </h3>
           <div className="flex space-x-1.5">
             {[0, 1, 2].map(i => {
-              const completedCount = [objectives.scout, objectives.advocate, objectives.cleaner].filter(Boolean).length;
+              const completedCount = Object.values(completions).filter(Boolean).length;
               return (
                 <div key={i} className={`w-2.5 h-2.5 rounded-full ${i < completedCount ? 'bg-[#d4af37] shadow-[0_0_8px_rgba(212,175,55,0.5)]' : 'border border-[#d4af37]/40 bg-transparent'}`} />
               );
@@ -194,78 +204,35 @@ export default function Home() {
         
         <div className="space-y-3">
           
-          {/* Mission 1: Scout */}
-          <div className={`flex items-center justify-between ${objectives.scout ? 'opacity-100' : 'opacity-70'}`}>
-            <div className="flex items-center space-x-3">
-              {isScoutClaimed ? (
-                <CheckCircle2 className="w-5 h-5 text-[#10b981]" />
-              ) : (
-                <div className={`w-5 h-5 rounded-full border-2 ${objectives.scout ? 'border-[#10b981] bg-[#10b981]/20' : 'border-zinc-500 bg-black/50'}`} />
-              )}
-              <span className={`font-bold text-sm ${objectives.scout ? 'text-white' : 'text-zinc-300'}`}>Report a new litter spot</span>
-            </div>
-            {isScoutClaimed ? (
-              <span className="text-[#10b981] font-black text-xs bg-[#10b981]/10 px-2 py-1 rounded">Claimed</span>
-            ) : objectives.scout ? (
-              <button 
-                onClick={() => claimMission('scout', 30, setIsScoutClaimed)}
-                className="text-black font-black text-xs bg-[#10b981] hover:bg-[#10b981]/80 px-3 py-1 rounded shadow-[0_0_10px_rgba(16,185,129,0.4)] transition-all active:scale-95"
-              >
-                Claim +30 XP
-              </button>
-            ) : (
-              <span className="text-zinc-400 font-black text-xs bg-white/5 px-2 py-1 rounded">+30 XP</span>
-            )}
-          </div>
-
-          {/* Mission 2: Advocate */}
-          <div className={`flex items-center justify-between ${objectives.advocate ? 'opacity-100' : 'opacity-70'}`}>
-            <div className="flex items-center space-x-3">
-              {isAdvocateClaimed ? (
-                <CheckCircle2 className="w-5 h-5 text-[#10b981]" />
-              ) : (
-                <div className={`w-5 h-5 rounded-full border-2 ${objectives.advocate ? 'border-[#10b981] bg-[#10b981]/20' : 'border-zinc-500 bg-black/50'}`} />
-              )}
-              <span className={`font-bold text-sm ${objectives.advocate ? 'text-white' : 'text-zinc-300'}`}>Support 3 community reports</span>
-            </div>
-            {isAdvocateClaimed ? (
-              <span className="text-[#10b981] font-black text-xs bg-[#10b981]/10 px-2 py-1 rounded">Claimed</span>
-            ) : objectives.advocate ? (
-              <button 
-                onClick={() => claimMission('advocate', 30, setIsAdvocateClaimed)}
-                className="text-black font-black text-xs bg-[#10b981] hover:bg-[#10b981]/80 px-3 py-1 rounded shadow-[0_0_10px_rgba(16,185,129,0.4)] transition-all active:scale-95"
-              >
-                Claim +30 XP
-              </button>
-            ) : (
-              <span className="text-zinc-400 font-black text-xs bg-white/5 px-2 py-1 rounded">+30 XP</span>
-            )}
-          </div>
-
-          {/* Mission 3: Cleaner */}
-          <div className={`flex items-center justify-between ${objectives.cleaner ? 'opacity-100' : 'opacity-70'}`}>
-            <div className="flex items-center space-x-3">
-              {isCleanerClaimed ? (
-                <CheckCircle2 className="w-5 h-5 text-[#10b981]" />
-              ) : (
-                <div className={`w-5 h-5 rounded-full border-2 ${objectives.cleaner ? 'border-[#10b981] bg-[#10b981]/20' : 'border-zinc-500 bg-black/50'}`} />
-              )}
-              <span className={`font-bold text-sm ${objectives.cleaner ? 'text-white' : 'text-zinc-300'}`}>Participate in 1 cleanup</span>
-            </div>
-            {isCleanerClaimed ? (
-              <span className="text-[#10b981] font-black text-xs bg-[#10b981]/10 px-2 py-1 rounded">Claimed</span>
-            ) : objectives.cleaner ? (
-              <button 
-                onClick={() => claimMission('cleaner', 50, setIsCleanerClaimed)}
-                className="text-black font-black text-xs bg-[#d4af37] hover:bg-[#d4af37]/80 px-3 py-1 rounded shadow-[0_0_10px_rgba(212,175,55,0.4)] transition-all active:scale-95"
-              >
-                Claim +50 XP
-              </button>
-            ) : (
-              <span className="text-zinc-400 font-black text-xs bg-white/5 px-2 py-1 rounded">+50 XP</span>
-            )}
-          </div>
-
+          {dailyMissions.map((mission, index) => {
+            const isCompleted = completions[mission.id];
+            const isClaimed = claims[mission.id];
+            
+            return (
+              <div key={mission.id} className={`flex items-center justify-between ${isCompleted ? 'opacity-100' : 'opacity-70'}`}>
+                <div className="flex items-center space-x-3">
+                  {isClaimed ? (
+                    <CheckCircle2 className="w-5 h-5 text-[#10b981]" />
+                  ) : (
+                    <div className={`w-5 h-5 rounded-full border-2 ${isCompleted ? 'border-[#10b981] bg-[#10b981]/20' : 'border-zinc-500 bg-black/50'}`} />
+                  )}
+                  <span className={`font-bold text-sm ${isCompleted ? 'text-white' : 'text-zinc-300'}`}>{mission.title}</span>
+                </div>
+                {isClaimed ? (
+                  <span className="text-[#10b981] font-black text-xs bg-[#10b981]/10 px-2 py-1 rounded">Claimed</span>
+                ) : isCompleted ? (
+                  <button 
+                    onClick={() => claimMission(mission)}
+                    className={`text-black font-black text-xs ${index === 2 ? 'bg-[#d4af37] hover:bg-[#d4af37]/80 shadow-[0_0_10px_rgba(212,175,55,0.4)]' : 'bg-[#10b981] hover:bg-[#10b981]/80 shadow-[0_0_10px_rgba(16,185,129,0.4)]'} px-3 py-1 rounded transition-all active:scale-95`}
+                  >
+                    Claim +{mission.xp} XP
+                  </button>
+                ) : (
+                  <span className="text-zinc-400 font-black text-xs bg-white/5 px-2 py-1 rounded">+{mission.xp} XP</span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </motion.div>
       
