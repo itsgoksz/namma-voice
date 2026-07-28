@@ -371,11 +371,12 @@ export default function FeedPage() {
         cleanup_timestamp: new Date().toISOString()
       }).eq('id', splitModalData!.id);
 
-      // Instant Gratification: Grant 20 XP immediately to all squad members
+      // Instant Gratification: Grant correct XP immediately to all squad members
+      const xpReward = getSeverityXP(splitModalData!.severity);
       const { data: squadUsers } = await supabase.from('users').select('name, xp').in('name', squad);
       if (squadUsers) {
         for (const u of squadUsers) {
-          await supabase.from('users').update({ xp: (u.xp || 0) + 20 }).eq('name', u.name);
+          await supabase.from('users').update({ xp: (u.xp || 0) + xpReward }).eq('name', u.name);
         }
       }
       
@@ -383,7 +384,7 @@ export default function FeedPage() {
       setSplitUsernames(['', '']);
       setSplitCount(2);
       
-      alert("✅ Cleanup Submitted\n\n+20 XP\n\nAwaiting Verification");
+      alert(`✅ Cleanup Submitted\n\n+${xpReward} XP\n\nAwaiting Verification`);
       
       // The realtime subscription will automatically refresh the feed
       const { data } = await supabase.from('reports').select('*').order('timestamp', { ascending: false });
@@ -572,7 +573,7 @@ export default function FeedPage() {
                     ) : (
                       <>
                         <CameraIcon className="w-5 h-5 text-[#050505]" />
-                        <span>I cleaned this up! (+20 XP)</span>
+                        <span>I cleaned this up! (+{getSeverityXP(post.severity || 'light')} XP)</span>
                       </>
                     )}
                   </button>
