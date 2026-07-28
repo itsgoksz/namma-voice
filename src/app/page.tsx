@@ -251,6 +251,7 @@ export default function Home() {
         <AnimatePresence>
           {closestMission && !isMissionDismissed && (
             <motion.div 
+              key="mission-popup"
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
@@ -291,6 +292,7 @@ export default function Home() {
           )}
           {closestMission && isMissionDismissed && (
             <motion.div 
+              key="mission-fab"
               initial={{ opacity: 0, scale: 0 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0 }}
