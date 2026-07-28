@@ -59,6 +59,9 @@ export default function Home() {
   const [completions, setCompletions] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    if (sessionStorage.getItem('namma_mission_dismissed') === 'true') {
+      setIsMissionDismissed(true);
+    }
     const today = new Date().toISOString().split('T')[0];
     const missions = getDailyMissions(today);
     setDailyMissions(missions);
@@ -254,7 +257,7 @@ export default function Home() {
               className="absolute bottom-4 left-4 right-4 z-[9999] glass-panel border border-[#10b981]/20 bg-[#000000]/90 backdrop-blur-xl rounded-3xl p-4 shadow-none"
             >
               <button 
-                onClick={() => setIsMissionDismissed(true)}
+                onClick={() => { setIsMissionDismissed(true); sessionStorage.setItem('namma_mission_dismissed', 'true'); }}
                 className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />
