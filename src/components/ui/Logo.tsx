@@ -5,13 +5,14 @@ interface LogoProps {
   color?: string;
 }
 
-export function Logo({ className = "w-10 h-10", color = "#7EBD01" }: LogoProps) {
+export const Logo = ({ className = "" }: { className?: string }) => {
   return (
-    <img 
-      src="/logo.svg?v=5"
-      alt="Namma Hood Logo"
-      className={className}
-      style={{ objectFit: 'contain' }}
-    />
+    <div className={`relative ${className}`}>
+      <img 
+        src="/logo.png?v=6" 
+        alt="Namma Hood Logo" 
+        className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+      />
+    </div>
   );
-}
+};
