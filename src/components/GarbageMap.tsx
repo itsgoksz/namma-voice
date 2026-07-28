@@ -275,17 +275,17 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
         </MarkerClusterGroup>
       </MapContainer>
 
-      <div className="absolute bottom-6 left-4 z-[400] glass-panel p-4 bg-[rgba(13,27,10,0.95)] shadow-[0_0_15px_rgba(0,0,0,0.8)] border border-[#10b981]/20 rounded-2xl">
-        <h3 className="text-white font-bold text-lg leading-tight">South Bengaluru</h3>
-        <p className="text-[#ff4d6d] font-black text-xs mb-2">{hotspots.length} reports live</p>
+      <div className="absolute bottom-4 left-3 z-[400] glass-panel p-2.5 bg-[rgba(13,27,10,0.95)] shadow-[0_0_10px_rgba(0,0,0,0.8)] border border-[#10b981]/20 rounded-xl">
+        <h3 className="text-white font-bold text-sm leading-tight">South Bengaluru</h3>
+        <p className="text-[#ff4d6d] font-black text-[10px] mb-1.5">{hotspots.length} reports live</p>
         
-        <div className="bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-lg p-2 flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-[#d4af37] flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>
+        <div className="bg-[#d4af37]/10 border border-[#d4af37]/30 rounded p-1.5 flex items-center gap-1.5">
+          <div className="w-5 h-5 rounded-full bg-[#d4af37] flex items-center justify-center shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>
           </div>
           <div>
-            <p className="text-xs text-[#d4af37]/80 font-bold uppercase tracking-widest leading-none">Sector Guardian</p>
-            <p className="text-white font-black text-sm leading-none mt-1">@{guardian}</p>
+            <p className="text-[9px] text-[#d4af37]/80 font-bold uppercase tracking-widest leading-none">Sector Guardian</p>
+            <p className="text-white font-black text-xs leading-none mt-0.5">@{guardian}</p>
           </div>
         </div>
       </div>
