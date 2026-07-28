@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Navigation, Flame, Target, CheckCircle2, X, Info } from "lucide-react";
 import { getCurrentUser } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
+import { Logo } from "@/components/ui/Logo";
 import { getUserStreak } from "@/lib/streak";
 import { getFastLocation } from "@/lib/location";
 import { Geolocation } from "@capacitor/geolocation";
@@ -161,12 +162,14 @@ export default function Home() {
   };
 
   return (
-    <div className="relative h-full overflow-hidden w-full flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+8rem)] space-y-4">
-      {/* Header & Streak Overlay */}
-      <div className="flex justify-between items-start z-10 pr-24">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Discover</h1>
-          <p className="text-zinc-400 text-sm font-semibold mt-1">Today's Missions</p>
+    <div className="relative h-full overflow-hidden w-full flex flex-col px-4 pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] space-y-4">
+      <div className="flex justify-between items-start z-10">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="max-w-[calc(100%-150px)]">
+          <div className="flex items-center space-x-4 mb-1">
+            <Logo className="w-16 h-16 shrink-0 text-[#10b981]" />
+            <h1 className="text-3xl font-bold text-white tracking-tight leading-tight">Namma<br />Hood</h1>
+          </div>
+          <p className="text-zinc-400 text-xs font-semibold mt-1">Together, we’re making JP Nagar the cleanest neighborhood.</p>
         </motion.div>
       </div>
 
@@ -177,22 +180,38 @@ export default function Home() {
       >
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-[#d4af37] font-bold text-sm uppercase tracking-widest flex items-center">
-            <Target className="w-4 h-4 mr-2 text-zinc-400" /> Weekly Objectives
+            <Target className="w-4 h-4 mr-2 text-zinc-400" /> Today's Missions
           </h3>
-          <span className="text-[#d4af37] font-black text-xs">+50 Eco XP</span>
+          <div className="flex space-x-1.5">
+            {[0, 1, 2].map(i => {
+              const completedCount = [objectives.hotspot, objectives.sunset, objectives.newArea].filter(Boolean).length;
+              return (
+                <div key={i} className={`w-2.5 h-2.5 rounded-full ${i < completedCount ? 'bg-[#d4af37] shadow-[0_0_8px_rgba(212,175,55,0.5)]' : 'border border-[#d4af37]/40 bg-transparent'}`} />
+              );
+            })}
+          </div>
         </div>
-        <div className="space-y-2">
-          <div className={`flex items-center space-x-3 ${objectives.hotspot ? 'opacity-100' : 'opacity-50'}`}>
-            {objectives.hotspot ? <CheckCircle2 className="w-5 h-5 text-zinc-400" /> : <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/20" />}
-            <span className={`text-sm ${objectives.hotspot ? 'font-semibold text-[#ff4d6d] line-through decoration-[#ff4d6d]/50' : 'font-medium text-[#ff4d6d]'}`}>Report 1 hotspot</span>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between opacity-100">
+            <div className="flex items-center space-x-3">
+              <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/50 bg-black/50" />
+              <span className="font-bold text-white text-sm">Report 3 litter spots</span>
+            </div>
+            <span className="text-[#10b981] font-black text-xs bg-[#10b981]/10 px-2 py-1 rounded">+20 XP</span>
           </div>
-          <div className={`flex items-center space-x-3 ${objectives.sunset ? 'opacity-100' : 'opacity-50'}`}>
-            {objectives.sunset ? <CheckCircle2 className="w-5 h-5 text-zinc-400" /> : <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/20" />}
-            <span className={`text-sm ${objectives.sunset ? 'font-semibold text-[#ff4d6d] line-through decoration-[#ff4d6d]/50' : 'font-medium text-[#ff4d6d]'}`}>Report after sunset</span>
+          <div className="flex items-center justify-between opacity-100">
+            <div className="flex items-center space-x-3">
+              <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/50 bg-black/50" />
+              <span className="font-bold text-white text-sm">Clean 1 hotspot</span>
+            </div>
+            <span className="text-[#10b981] font-black text-xs bg-[#10b981]/10 px-2 py-1 rounded">+20 XP</span>
           </div>
-          <div className={`flex items-center space-x-3 ${objectives.newArea ? 'opacity-100' : 'opacity-50'}`}>
-            {objectives.newArea ? <CheckCircle2 className="w-5 h-5 text-zinc-400" /> : <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/20" />}
-            <span className={`text-sm ${objectives.newArea ? 'font-semibold text-[#ff4d6d] line-through decoration-[#ff4d6d]/50' : 'font-medium text-[#ff4d6d]'}`}>Visit a new area</span>
+          <div className="flex items-center justify-between opacity-50">
+            <div className="flex items-center space-x-3">
+              <div className="w-5 h-5 rounded-full border-2 border-[#d4af37]/50 bg-black/50" />
+              <span className="font-bold text-zinc-300 text-sm">Walk 2 km while reporting</span>
+            </div>
+            <span className="text-[#d4af37] font-black text-[10px] uppercase tracking-wider bg-[#d4af37]/10 px-2 py-1 rounded">Badge</span>
           </div>
         </div>
         {objectives.hotspot && objectives.sunset && objectives.newArea && (

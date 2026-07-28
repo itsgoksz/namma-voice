@@ -1,5 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+};
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import Starfield from "@/components/Starfield";
@@ -27,7 +35,7 @@ export default function RootLayout({
         <OfflineSyncWorker />
         <LoginOverlay />
         <Starfield />
-        <main className="max-w-md mx-auto h-full w-full relative z-10 pt-6">
+        <main className="max-w-md mx-auto h-full w-full relative z-10">
           <NotificationInbox />
           {children}
         </main>

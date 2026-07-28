@@ -26,6 +26,8 @@ interface Hotspot {
   reports: number;
   severity: string;
   image_base64?: string;
+  status?: string;
+  cleanup_image_base64?: string;
 }
 
 let cachedHotspots: Hotspot[] | null = null;
@@ -77,9 +79,18 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
     };
 
     fetchReports();
-    // Refresh every 5 seconds for live testing
-    const interval = setInterval(fetchReports, 5000);
-    return () => clearInterval(interval);
+
+    // Switch to Event-Driven Realtime updates instead of polling
+    const subscription = supabase
+      .channel('public:reports')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
+        fetchReports();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   return (
@@ -158,7 +169,13 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
             let iconSvg = '';
             let size = 44;
 
-            if (spot.severity === 'critical') {
+            if (spot.status === 'CLEANED') {
+              level = 0;
+              color = '#10b981'; // Emerald
+              glowColor = '#059669';
+              iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+              size = 50;
+            } else if (spot.severity === 'critical') {
               level = 4;
               color = '#800000'; // Dark Maroon
               glowColor = '#4a0404';
@@ -193,9 +210,11 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
                   </div>
                   
                   <!-- Level Badge (Game Style) -->
+                  ${spot.status !== 'CLEANED' ? `
                   <div class="absolute -top-1 -right-1 w-[22px] h-[22px] rounded-full bg-black border-2 flex items-center justify-center font-black text-[11px] text-white z-10" style="border-color: ${glowColor}; box-shadow: 0 0 8px ${glowColor}">
                     L${level}
                   </div>
+                  ` : ''}
                 </div>
               `,
               iconSize: [size, size],
@@ -208,13 +227,34 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
                 position={spot.pos}
                 icon={customIcon}
               >
-                <Popup className="custom-popup" minWidth={150}>
+                <Popup className="custom-popup" minWidth={spot.status === 'CLEANED' ? 240 : 150}>
                   <div className="text-center font-bold flex flex-col items-center">
-                    {spot.image_base64 && (
+                    {spot.status === 'CLEANED' && spot.cleanup_image_base64 ? (
+                      <div className="grid grid-cols-2 gap-1 w-full mb-2">
+                        <div className="relative">
+                          <img src={getImageUrl(spot.image_base64 || "")} alt="Before" className="w-full h-20 object-cover rounded-l-lg" crossOrigin="anonymous" />
+                          <div className="absolute top-1 left-1 bg-black/60 px-1 py-0.5 rounded text-[8px] font-bold text-white tracking-widest uppercase">Before</div>
+                        </div>
+                        <div className="relative">
+                          <img src={getImageUrl(spot.cleanup_image_base64)} alt="After" className="w-full h-20 object-cover rounded-r-lg" crossOrigin="anonymous" />
+                          <div className="absolute top-1 left-1 bg-[#2E6F40]/80 px-1 py-0.5 rounded text-[8px] font-bold text-white tracking-widest uppercase">Cleaned</div>
+                        </div>
+                      </div>
+                    ) : spot.image_base64 ? (
                       <img src={getImageUrl(spot.image_base64)} alt="Hotspot" className="w-full h-24 object-cover rounded-lg mb-2" crossOrigin="anonymous" />
+                    ) : null}
+                    
+                    {spot.status === 'CLEANED' ? (
+                       <>
+                         <span className="text-[#10b981] text-lg mt-1 tracking-tight">Cleaned</span>
+                         <span className="text-xs text-slate-500/80 uppercase tracking-widest font-black">Restored Area</span>
+                       </>
+                    ) : (
+                       <>
+                         <span className="text-zinc-400 text-xl">{spot.reports}</span>
+                         <span className="text-xs text-slate-500/80 uppercase tracking-widest font-black">Active Reports</span>
+                       </>
                     )}
-                    <span className="text-zinc-400 text-xl">{spot.reports}</span>
-                    <span className="text-xs text-slate-500/80 uppercase tracking-widest font-black">Active Reports</span>
                   </div>
                 </Popup>
               </Marker>

@@ -49,7 +49,7 @@ export default function BottomNav() {
                 whileTap={{ scale: 0.9 }}
                 className={cn(
                   "flex flex-col items-center",
-                  isActive ? "text-zinc-400" : "text-[#71717a]"
+                  isActive ? "text-white" : "text-zinc-400"
                 )}
               >
                 <Icon

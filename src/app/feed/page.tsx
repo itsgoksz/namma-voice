@@ -185,8 +185,18 @@ export default function FeedPage() {
       }
     };
     fetchFeed();
-    const interval = setInterval(fetchFeed, 5000);
-    return () => clearInterval(interval);
+    
+    // Switch to Event-Driven Realtime updates instead of polling
+    const subscription = supabase
+      .channel('public:reports')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
+        fetchFeed();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   const handleSupport = async (e: React.MouseEvent, id: number) => {
@@ -353,21 +363,29 @@ export default function FeedPage() {
         }
       }
       
-      // Update under review status
+      // Update under review status (but still grant XP immediately for instant gratification)
       await supabase.from('reports').update({ 
         cleanup_image_base64: splitModalData!.imageUrl, 
         status: 'UNDER_REVIEW',
         cleanup_squad: squad,
         cleanup_timestamp: new Date().toISOString()
       }).eq('id', splitModalData!.id);
+
+      // Instant Gratification: Grant 20 XP immediately to all squad members
+      const { data: squadUsers } = await supabase.from('users').select('name, xp').in('name', squad);
+      if (squadUsers) {
+        for (const u of squadUsers) {
+          await supabase.from('users').update({ xp: (u.xp || 0) + 20 }).eq('name', u.name);
+        }
+      }
       
       setSplitModalData(null);
       setSplitUsernames(['', '']);
       setSplitCount(2);
       
-      alert("Cleanup submitted! Verification can take up to 1 hour. XP will be distributed once verified.");
+      alert("✅ Cleanup Submitted\n\n+20 XP\n\nAwaiting Verification");
       
-      // Refresh feed
+      // The realtime subscription will automatically refresh the feed
       const { data } = await supabase.from('reports').select('*').order('timestamp', { ascending: false });
       if (data) setFeed(data);
       
@@ -391,11 +409,11 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="p-4 space-y-6 h-full overflow-y-auto flex flex-col pt-[calc(env(safe-area-inset-top)+2rem)] pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
+    <div className="p-4 space-y-6 h-full overflow-y-auto flex flex-col pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-start justify-center mt-2 space-y-1 mb-4"
+        className="flex flex-col items-start justify-center mt-2 space-y-1 mb-4 max-w-[calc(100%-150px)]"
       >
         <h1 className="text-4xl font-bold text-white tracking-tight">Community</h1>
         <p className="text-zinc-400 text-sm font-medium">Live civic action feed.</p>

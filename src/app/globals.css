@@ -9,6 +9,11 @@
   --card-bg: rgba(16, 185, 129, 0.1);
   --card-border: rgba(255, 255, 255, 0.1);
   --text-secondary: #a1a1aa;
+  --header-top: calc(max(env(safe-area-inset-top), 44px) + 1rem);
+}
+
+.pt-safe-header {
+  padding-top: var(--header-top);
 }
 
 @theme inline {

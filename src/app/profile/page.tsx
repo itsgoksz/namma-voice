@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Award, Flame, MapPin, Zap, Info } from "lucide-react";
+import { Award, Flame, MapPin, Zap, Info, Leaf } from "lucide-react";
 import { ProgressionTree } from "@/components/ProgressionTree";
 import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/api";
@@ -11,9 +11,10 @@ import { getUserStreak } from "@/lib/streak";
 import { getFastLocation } from "@/lib/location";
 
 export default function ProfilePage() {
-  const [user, setUser] = useState({ name: getCurrentUser(), level: 1, xp: 0, reports_count: 0 });
+  const [user, setUser] = useState({ name: getCurrentUser(), level: 1, xp: 0, reports_count: 0, eco_credits: 0 });
   const [loading, setLoading] = useState(true);
   const [streak, setStreak] = useState(0);
+  const [cleanupsCount, setCleanupsCount] = useState(0);
   const [locationName, setLocationName] = useState("Locating...");
   const [badgeMessage, setBadgeMessage] = useState<{ title: string, text: string } | null>(null);
 
@@ -45,6 +46,7 @@ export default function ProfilePage() {
         const { data, error } = await supabase.from('users').select('*').eq('name', username).single();
         if (!error && data) {
           setUser(data);
+          setCleanupsCount(data.cleanups_count || 0);
         }
       } catch (e) {
         console.error("Failed to fetch user", e);
@@ -76,7 +78,7 @@ export default function ProfilePage() {
   if (loading) return null;
 
   return (
-    <div className="p-4 space-y-6 h-full overflow-y-auto pt-[calc(env(safe-area-inset-top)+2rem)] pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
+    <div className="p-4 space-y-6 h-full overflow-y-auto pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
       <AnimatePresence>
         {badgeMessage && (
           <motion.div
@@ -109,7 +111,7 @@ export default function ProfilePage() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-start justify-center mt-2 space-y-1"
+        className="flex flex-col items-start justify-center mt-2 space-y-1 max-w-[calc(100%-150px)]"
       >
         <h1 className="text-4xl font-bold text-white tracking-tight">
           Good Evening, {user.name}.
@@ -145,6 +147,19 @@ export default function ProfilePage() {
             <Award className="w-6 h-6 text-[#3a86ff] mb-3" />
             <p className="text-3xl font-black text-white">{user.reports_count}</p>
             <p className="text-xs text-white/70 font-bold uppercase tracking-widest mt-1">Total Reports</p>
+          </div>
+          <div className="glass-panel p-5 rounded-3xl border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-xl flex items-center justify-between">
+            <div>
+              <p className="text-3xl font-black text-white">{cleanupsCount}</p>
+              <p className="text-xs text-white/70 font-bold uppercase tracking-widest mt-1">Total Cleanups</p>
+            </div>
+            <Leaf className="w-10 h-10 text-[#10b981]" />
+          </div>
+          <div className="glass-panel p-5 rounded-3xl border border-[#d4af37]/30 bg-[#d4af37]/10 backdrop-blur-2xl shadow-xl flex items-center justify-between">
+            <div>
+              <p className="text-3xl font-black text-[#d4af37]">{user.eco_credits || 0}</p>
+              <p className="text-[10px] text-[#d4af37]/70 font-bold uppercase tracking-widest mt-1">Eco Credits</p>
+            </div>
           </div>
         </div>
       </motion.div>

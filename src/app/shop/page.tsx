@@ -6,7 +6,7 @@ import { ShoppingBag, Star, Zap, Info, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
-import { getEcoCredits, SHOP_ITEMS, purchaseItem, getInventory } from "@/lib/economy";
+import { SHOP_ITEMS, purchaseItem, getInventory } from "@/lib/economy";
 
 export default function ShopPage() {
   const [level, setLevel] = useState<number>(1);
@@ -20,11 +20,10 @@ export default function ShopPage() {
       const user = getCurrentUser();
       if (!user) return;
       try {
-        const { data } = await supabase.from('users').select('level').eq('name', user).single();
+        const { data } = await supabase.from('users').select('level, eco_credits').eq('name', user).single();
         if (data) {
           setLevel(data.level);
-          const credits = getEcoCredits(data.level);
-          setBalance(credits.balance);
+          setBalance(data.eco_credits || 0);
           setInventory(getInventory());
         }
       } catch (e) {
@@ -36,7 +35,7 @@ export default function ShopPage() {
     fetchData();
   }, []);
 
-  const handlePurchase = (item: any) => {
+  const handlePurchase = async (item: any) => {
     if (inventory.includes(item.id)) {
       setPurchaseMsg({ text: "You already own this item!", isError: true });
       setTimeout(() => setPurchaseMsg(null), 3000);
@@ -49,18 +48,20 @@ export default function ShopPage() {
       return;
     }
 
-    const success = purchaseItem(level, item);
+    const success = await purchaseItem(balance, item);
     if (success) {
-      const credits = getEcoCredits(level);
-      setBalance(credits.balance);
+      setBalance(prev => prev - item.price);
       setInventory(getInventory());
       setPurchaseMsg({ text: `Successfully purchased ${item.name}!`, isError: false });
+      setTimeout(() => setPurchaseMsg(null), 3000);
+    } else {
+      setPurchaseMsg({ text: "Purchase failed.", isError: true });
       setTimeout(() => setPurchaseMsg(null), 3000);
     }
   };
 
   return (
-    <div className="p-4 space-y-6 h-full overflow-y-auto flex flex-col pt-[calc(env(safe-area-inset-top)+2rem)] pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
+    <div className="p-4 space-y-6 h-full overflow-y-auto flex flex-col pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
       
       <AnimatePresence>
         {purchaseMsg && (
@@ -83,7 +84,7 @@ export default function ShopPage() {
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-start justify-center mt-2 space-y-1"
+        className="flex flex-col items-start justify-center mt-2 space-y-1 max-w-[calc(100%-150px)]"
       >
         <h1 className="text-4xl font-bold text-white tracking-tight">Eco Shop</h1>
         <p className="text-zinc-400 text-sm font-medium">Redeem your hard-earned credits.</p>

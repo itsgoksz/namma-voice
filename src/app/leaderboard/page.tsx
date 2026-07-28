@@ -65,11 +65,11 @@ export default function LeaderboardPage() {
   const rest = leaders.slice(3);
 
   return (
-    <div className="p-4 space-y-6 h-full overflow-hidden flex flex-col pt-[calc(env(safe-area-inset-top)+2rem)] pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
+    <div className="p-4 space-y-6 h-full overflow-hidden flex flex-col pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-start justify-center mt-2 space-y-1"
+        className="flex flex-col items-start justify-center mt-2 space-y-1 max-w-[calc(100%-150px)]"
       >
         <h1 className="text-4xl font-bold text-white tracking-tight">Leaderboard</h1>
       </motion.div>

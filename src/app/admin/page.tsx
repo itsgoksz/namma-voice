@@ -60,12 +60,10 @@ export default function AdminPage() {
 
       // Grant XP to squad
       for (const member of squad) {
-        const { data: user } = await supabase.from('users').select('xp, level').eq('name', member).single();
+        const { data: user } = await supabase.from('users').select('xp').eq('name', member).single();
         if (user) {
           const newXp = (user.xp || 0) + perPerson;
-          let newLevel = user.level || 1;
-          if (newXp >= newLevel * 50) newLevel += 1;
-          await supabase.from('users').update({ xp: newXp, level: newLevel }).eq('name', member);
+          await supabase.from('users').update({ xp: newXp }).eq('name', member);
         }
         
         // Notify squad member
@@ -110,11 +108,21 @@ export default function AdminPage() {
       await supabase.from('reports').update({ status: 'REPORTED', cleanup_image_base64: null }).eq('id', report.id);
       
       const squad = report.cleanup_squad || [];
+      
+      // Deduct the instantly granted 20 XP as a penalty
+      const { data: squadUsers } = await supabase.from('users').select('name, xp').in('name', squad);
+      if (squadUsers) {
+        for (const u of squadUsers) {
+          const newXp = Math.max(0, (u.xp || 0) - 20);
+          await supabase.from('users').update({ xp: newXp }).eq('name', u.name);
+        }
+      }
+
       for (const member of squad) {
         await supabase.from('notifications').insert([{
           username: member,
           title: "Cleanup Rejected",
-          message: `Your cleanup submission was rejected by Admin. Please ensure photos are clear and accurate.`
+          message: `Your cleanup submission was rejected by Admin (Duplicate or Fraud). Penalty: -20 XP.`
         }]);
       }
 

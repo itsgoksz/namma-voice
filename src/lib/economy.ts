@@ -3,6 +3,7 @@
 // and track purchases / spent credits in localStorage.
 
 import { getCurrentUser } from "./api";
+import { supabase } from "./supabase";
 
 export interface ShopItem {
   id: string;
@@ -39,19 +40,17 @@ export const getEcoCredits = (currentLevel: number): { totalEarned: number; spen
   };
 };
 
-export const purchaseItem = (currentLevel: number, item: ShopItem): boolean => {
+export const purchaseItem = async (currentCredits: number, item: ShopItem): Promise<boolean> => {
   const user = getCurrentUser();
   if (!user) return false;
 
-  const { balance } = getEcoCredits(currentLevel);
-  
-  if (balance >= item.price) {
-    // Deduct credits
-    const spentKey = `littr_spent_credits_${user}`;
-    const currentSpent = parseInt(localStorage.getItem(spentKey) || '0', 10);
-    localStorage.setItem(spentKey, (currentSpent + item.price).toString());
+  if (currentCredits >= item.price) {
+    // Deduct credits from DB
+    const newCredits = currentCredits - item.price;
+    const { error } = await supabase.from('users').update({ eco_credits: newCredits }).eq('name', user);
+    if (error) return false;
 
-    // Add to inventory
+    // Add to inventory locally
     const inventoryKey = `littr_inventory_${user}`;
     const inventory = JSON.parse(localStorage.getItem(inventoryKey) || '[]');
     if (!inventory.includes(item.id)) {

@@ -91,7 +91,10 @@ export default function NotificationInbox() {
   };
 
   return (
-    <div className="absolute top-[calc(env(safe-area-inset-top)+1rem)] right-4 z-[900] flex items-center space-x-3">
+    <div 
+      className="absolute right-4 z-[900] flex items-center space-x-3"
+      style={{ top: 'var(--header-top)' }}
+    >
 
       {/* Streak Badge */}
       <Link href="/profile">
