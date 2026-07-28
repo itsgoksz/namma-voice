@@ -53,32 +53,29 @@ export default function Home() {
   
   const [streak, setStreak] = useState(0);
   const [isMissionDismissed, setIsMissionDismissed] = useState(false);
-  const [isClaimed, setIsClaimed] = useState(false);
+  const [isScoutClaimed, setIsScoutClaimed] = useState(false);
+  const [isAdvocateClaimed, setIsAdvocateClaimed] = useState(false);
+  const [isCleanerClaimed, setIsCleanerClaimed] = useState(false);
 
   useEffect(() => {
-    setIsClaimed(localStorage.getItem('namma_weekly_claimed') === 'true');
+    setIsScoutClaimed(localStorage.getItem('namma_mission_scout_claimed') === 'true');
+    setIsAdvocateClaimed(localStorage.getItem('namma_mission_advocate_claimed') === 'true');
+    setIsCleanerClaimed(localStorage.getItem('namma_mission_cleaner_claimed') === 'true');
   }, []);
 
-  const [claiming, setClaiming] = useState(false);
-  const handleClaim = async () => {
-    if (isClaimed || claiming) return;
-    setClaiming(true);
-    localStorage.setItem('namma_weekly_claimed', 'true');
-    setIsClaimed(true);
+  const claimMission = async (missionKey: string, xpReward: number, setClaimState: any) => {
+    setClaimState(true);
+    localStorage.setItem(`namma_mission_${missionKey}_claimed`, 'true');
     try {
       const { data } = await supabase.from('users').select('xp').eq('name', getCurrentUser()).single();
       if (data) {
-        await supabase.from('users').update({ xp: data.xp + 50 }).eq('name', getCurrentUser());
+        await supabase.from('users').update({ xp: data.xp + xpReward }).eq('name', getCurrentUser());
       }
-      alert("🎉 Weekly Objectives Complete! +50 Eco XP Earned!");
     } catch (e) {
-      localStorage.removeItem('namma_weekly_claimed');
-      setIsClaimed(false);
       console.error(e);
-    } finally {
-      setClaiming(false);
     }
   };
+  
   const [objectives, setObjectives] = useState(cachedObjectives);
 
   useEffect(() => {
@@ -131,13 +128,16 @@ export default function Home() {
         if (!feedError && feedData) {
           const feed = feedData;
           const myReports = feed.filter((r: any) => r.username === getCurrentUser());
+          const supportedStr = localStorage.getItem('namma_supported_posts') || '[]';
+          let supportedCount = 0;
+          try { supportedCount = JSON.parse(supportedStr).length; } catch(e) {}
+          
+          const myCleanups = feed.filter((r: any) => r.cleanup_squad?.includes(getCurrentUser()));
+
           const newObjectives = {
-            hotspot: myReports.length > 0,
-            sunset: myReports.some((r: any) => {
-              const d = new Date(r.timestamp.endsWith('Z') ? r.timestamp : r.timestamp + 'Z');
-              return d.getHours() >= 18 || d.getHours() < 6;
-            }),
-            newArea: myReports.length > 1
+            scout: myReports.length >= 1,
+            advocate: supportedCount >= 3,
+            cleaner: myCleanups.length >= 1
           };
           cachedObjectives = newObjectives;
           setObjectives(newObjectives);
@@ -184,52 +184,89 @@ export default function Home() {
           </h3>
           <div className="flex space-x-1.5">
             {[0, 1, 2].map(i => {
-              const completedCount = [objectives.hotspot, objectives.sunset, objectives.newArea].filter(Boolean).length;
+              const completedCount = [objectives.scout, objectives.advocate, objectives.cleaner].filter(Boolean).length;
               return (
                 <div key={i} className={`w-2.5 h-2.5 rounded-full ${i < completedCount ? 'bg-[#d4af37] shadow-[0_0_8px_rgba(212,175,55,0.5)]' : 'border border-[#d4af37]/40 bg-transparent'}`} />
               );
             })}
           </div>
         </div>
+        
         <div className="space-y-3">
-          <div className="flex items-center justify-between opacity-100">
+          
+          {/* Mission 1: Scout */}
+          <div className={`flex items-center justify-between ${objectives.scout ? 'opacity-100' : 'opacity-70'}`}>
             <div className="flex items-center space-x-3">
-              <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/50 bg-black/50" />
-              <span className="font-bold text-white text-sm">Report 3 litter spots</span>
+              {isScoutClaimed ? (
+                <CheckCircle2 className="w-5 h-5 text-[#10b981]" />
+              ) : (
+                <div className={`w-5 h-5 rounded-full border-2 ${objectives.scout ? 'border-[#10b981] bg-[#10b981]/20' : 'border-zinc-500 bg-black/50'}`} />
+              )}
+              <span className={`font-bold text-sm ${objectives.scout ? 'text-white' : 'text-zinc-300'}`}>Report a new litter spot</span>
             </div>
-            <span className="text-[#10b981] font-black text-xs bg-[#10b981]/10 px-2 py-1 rounded">+20 XP</span>
-          </div>
-          <div className="flex items-center justify-between opacity-100">
-            <div className="flex items-center space-x-3">
-              <div className="w-5 h-5 rounded-full border-2 border-[#10b981]/50 bg-black/50" />
-              <span className="font-bold text-white text-sm">Clean 1 hotspot</span>
-            </div>
-            <span className="text-[#10b981] font-black text-xs bg-[#10b981]/10 px-2 py-1 rounded">+20 XP</span>
-          </div>
-          <div className="flex items-center justify-between opacity-50">
-            <div className="flex items-center space-x-3">
-              <div className="w-5 h-5 rounded-full border-2 border-[#d4af37]/50 bg-black/50" />
-              <span className="font-bold text-zinc-300 text-sm">Walk 2 km while reporting</span>
-            </div>
-            <span className="text-[#d4af37] font-black text-[10px] uppercase tracking-wider bg-[#d4af37]/10 px-2 py-1 rounded">Badge</span>
-          </div>
-        </div>
-        {objectives.hotspot && objectives.sunset && objectives.newArea && (
-          <button
-            onClick={handleClaim}
-            disabled={isClaimed}
-            className={`w-full mt-4 py-2 rounded-xl font-black text-sm flex items-center justify-center space-x-2 transition-all active:scale-95 ${isClaimed ? 'bg-[#10b981]/20 text-[#10b981]' : 'bg-[#d4af37] text-black hover:bg-[#d4af37]/90'}`}
-          >
-            {isClaimed ? (
-              <>
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Claimed (+50 XP)</span>
-              </>
+            {isScoutClaimed ? (
+              <span className="text-[#10b981] font-black text-xs bg-[#10b981]/10 px-2 py-1 rounded">Claimed</span>
+            ) : objectives.scout ? (
+              <button 
+                onClick={() => claimMission('scout', 30, setIsScoutClaimed)}
+                className="text-black font-black text-xs bg-[#10b981] hover:bg-[#10b981]/80 px-3 py-1 rounded shadow-[0_0_10px_rgba(16,185,129,0.4)] transition-all active:scale-95"
+              >
+                Claim +30 XP
+              </button>
             ) : (
-              <span>Claim Reward</span>
+              <span className="text-zinc-400 font-black text-xs bg-white/5 px-2 py-1 rounded">+30 XP</span>
             )}
-          </button>
-        )}
+          </div>
+
+          {/* Mission 2: Advocate */}
+          <div className={`flex items-center justify-between ${objectives.advocate ? 'opacity-100' : 'opacity-70'}`}>
+            <div className="flex items-center space-x-3">
+              {isAdvocateClaimed ? (
+                <CheckCircle2 className="w-5 h-5 text-[#10b981]" />
+              ) : (
+                <div className={`w-5 h-5 rounded-full border-2 ${objectives.advocate ? 'border-[#10b981] bg-[#10b981]/20' : 'border-zinc-500 bg-black/50'}`} />
+              )}
+              <span className={`font-bold text-sm ${objectives.advocate ? 'text-white' : 'text-zinc-300'}`}>Support 3 community reports</span>
+            </div>
+            {isAdvocateClaimed ? (
+              <span className="text-[#10b981] font-black text-xs bg-[#10b981]/10 px-2 py-1 rounded">Claimed</span>
+            ) : objectives.advocate ? (
+              <button 
+                onClick={() => claimMission('advocate', 30, setIsAdvocateClaimed)}
+                className="text-black font-black text-xs bg-[#10b981] hover:bg-[#10b981]/80 px-3 py-1 rounded shadow-[0_0_10px_rgba(16,185,129,0.4)] transition-all active:scale-95"
+              >
+                Claim +30 XP
+              </button>
+            ) : (
+              <span className="text-zinc-400 font-black text-xs bg-white/5 px-2 py-1 rounded">+30 XP</span>
+            )}
+          </div>
+
+          {/* Mission 3: Cleaner */}
+          <div className={`flex items-center justify-between ${objectives.cleaner ? 'opacity-100' : 'opacity-70'}`}>
+            <div className="flex items-center space-x-3">
+              {isCleanerClaimed ? (
+                <CheckCircle2 className="w-5 h-5 text-[#10b981]" />
+              ) : (
+                <div className={`w-5 h-5 rounded-full border-2 ${objectives.cleaner ? 'border-[#10b981] bg-[#10b981]/20' : 'border-zinc-500 bg-black/50'}`} />
+              )}
+              <span className={`font-bold text-sm ${objectives.cleaner ? 'text-white' : 'text-zinc-300'}`}>Participate in 1 cleanup</span>
+            </div>
+            {isCleanerClaimed ? (
+              <span className="text-[#10b981] font-black text-xs bg-[#10b981]/10 px-2 py-1 rounded">Claimed</span>
+            ) : objectives.cleaner ? (
+              <button 
+                onClick={() => claimMission('cleaner', 50, setIsCleanerClaimed)}
+                className="text-black font-black text-xs bg-[#d4af37] hover:bg-[#d4af37]/80 px-3 py-1 rounded shadow-[0_0_10px_rgba(212,175,55,0.4)] transition-all active:scale-95"
+              >
+                Claim +50 XP
+              </button>
+            ) : (
+              <span className="text-zinc-400 font-black text-xs bg-white/5 px-2 py-1 rounded">+50 XP</span>
+            )}
+          </div>
+
+        </div>
       </motion.div>
       
       {/* Map Container */}
