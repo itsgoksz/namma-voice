@@ -69,9 +69,9 @@ export default function LeaderboardPage() {
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-start justify-center mt-2 space-y-1 max-w-[calc(100%-150px)]"
+        className="flex flex-col items-start justify-center mt-2 space-y-1 w-full max-w-[calc(100%-150px)]"
       >
-        <h1 className="text-4xl font-bold text-white tracking-tight">Leaderboard</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight truncate w-full">Leaderboard</h1>
       </motion.div>
 
       <div className="flex space-x-2 w-full mt-2">

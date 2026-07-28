@@ -108,13 +108,13 @@ export default function ProfilePage() {
         )}
       </AnimatePresence>
 
-      <motion.div
+      <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-start justify-center mt-2 space-y-1 max-w-[calc(100%-150px)]"
+        className="flex flex-col items-start justify-center mt-2 space-y-1 w-full max-w-[calc(100%-150px)]"
       >
-        <h1 className="text-4xl font-bold text-white tracking-tight">
-          Good Evening, {user.name}.
+        <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight truncate w-full">
+          Hello, {user.name}
         </h1>
         <div className="flex items-center space-x-1 mt-1 opacity-80">
           <MapPin className="text-zinc-400 w-4 h-4" />

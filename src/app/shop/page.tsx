@@ -84,9 +84,9 @@ export default function ShopPage() {
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-start justify-center mt-2 space-y-1 max-w-[calc(100%-150px)]"
+        className="flex flex-col items-start justify-center mt-2 space-y-1 w-full max-w-[calc(100%-150px)]"
       >
-        <h1 className="text-4xl font-bold text-white tracking-tight">Eco Shop</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight truncate w-full">Eco Shop</h1>
         <p className="text-zinc-400 text-sm font-medium">Redeem your hard-earned credits.</p>
       </motion.div>
 

@@ -133,8 +133,12 @@ export default function ReportPage() {
 
   return (
     <div className="p-4 space-y-6 h-full overflow-y-auto flex flex-col pt-[calc(env(safe-area-inset-top)+2rem)] pb-[calc(env(safe-area-inset-bottom)+8rem)]">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-bold text-white tracking-tight">Report Issue</h1>
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col items-start justify-center mt-2 space-y-1 w-full max-w-[calc(100%-150px)]"
+      >
+        <h1 className="text-3xl font-bold text-white tracking-tight truncate w-full">Report Issue</h1>
       </motion.div>
 
       <motion.div 
