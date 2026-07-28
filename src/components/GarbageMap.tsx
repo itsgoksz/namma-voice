@@ -7,6 +7,7 @@ import L from "leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { getImageUrl } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
+import { Navigation } from "lucide-react";
 
 import { LatLngBoundsExpression } from "leaflet";
 
@@ -253,6 +254,17 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
                        <>
                          <span className="text-zinc-400 text-xl">{spot.reports}</span>
                          <span className="text-xs text-slate-500/80 uppercase tracking-widest font-black">Active Reports</span>
+                         
+                         <button
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             window.open(`https://www.google.com/maps/dir/?api=1&destination=${spot.pos[0]},${spot.pos[1]}`, '_blank');
+                           }}
+                           className="mt-3 w-full bg-[#f14f4f] text-white font-black py-2 rounded-lg flex items-center justify-center space-x-2 active:scale-95 transition-transform shadow-[0_0_15px_rgba(241,79,79,0.3)]"
+                         >
+                           <Navigation className="w-4 h-4" />
+                           <span>Navigate</span>
+                         </button>
                        </>
                     )}
                   </div>
