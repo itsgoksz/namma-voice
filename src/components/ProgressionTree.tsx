@@ -4,7 +4,6 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { seedPaths } from './GoldenSeed';
 
-// Deterministic pseudo-random number generator
 const random = (seed: number) => {
   const x = Math.sin(seed) * 10000;
   return x - Math.floor(x);
@@ -12,140 +11,188 @@ const random = (seed: number) => {
 
 export const ProgressionTree = ({ level, xp, nextLevelXp }: { level: number, xp: number, nextLevelXp: number }) => {
   const isMaxLevel = level >= 100;
-  
-  // Growth factors (0.0 to 1.0), mapped differently for stages
-  // Level 1: 0, Level 10: 0.1, Level 100: 1.0
-  const growth = Math.max(0, Math.min(level - 1, 99)) / 99;
-  
-  // Procedural Dimensions
-  // Soil
-  const soilWidth = 80 + (growth * 120);
-  const soilHeight = 20 + (growth * 20);
-  
-  // Trunk
-  const treeHeight = level < 2 ? 0 : 20 + (growth * 220); 
-  const trunkBaseWidth = level < 2 ? 0 : 4 + (growth * 36);
-  const trunkTopWidth = level < 2 ? 0 : 2 + (growth * 16);
-  
-  // Canopy (Leaves)
-  const canopyRadiusX = 20 + (growth * 120);
-  const canopyRadiusY = 15 + (growth * 90);
-  const canopyCenterY = 340 - treeHeight;
+  const t = Math.max(0, Math.min(level - 1, 99)) / 99; // 0.0 to 1.0
 
-  // Determine stage names and colors
+  // Stage Names & Colors
   let stageName = "";
+  let textColor = "";
   let glowColor = "";
-  let leafColors = ['#22c55e', '#16a34a', '#15803d', '#4ade80'];
-  let textColor = "text-[#4ade80]";
 
-  if (level < 2) {
-    stageName = "The Seed";
+  if (level <= 20) {
+    stageName = "Germination";
+    textColor = "text-[#d4af37]";
+    glowColor = "rgba(163,230,53,0.1)";
+  } else if (level <= 40) {
+    stageName = "The Seedling";
+    textColor = "text-[#84cc16]";
     glowColor = "rgba(163,230,53,0.2)";
-    leafColors = ['#84cc16', '#a3e635'];
-    textColor = "text-[#d4af37]"; // Gold color for the seed
-  } else if (level < 10) {
-    stageName = "The Sprout";
-    glowColor = "rgba(163,230,53,0.2)";
-    leafColors = ['#84cc16', '#a3e635'];
-    textColor = "text-[#a3e635]";
-  } else if (level < 30) {
+  } else if (level <= 60) {
     stageName = "The Sapling";
-    glowColor = "rgba(74,222,128,0.3)";
-    textColor = "text-[#4ade80]";
-  } else if (level < 60) {
-    stageName = "Young Tree";
-    glowColor = "rgba(34,197,94,0.4)";
     textColor = "text-[#22c55e]";
-  } else if (level < 100) {
-    stageName = "Mature Tree";
-    glowColor = "rgba(21,128,61,0.5)";
-    textColor = "text-[#16a34a]";
+    glowColor = "rgba(34,197,94,0.3)";
+  } else if (level <= 80) {
+    stageName = "Young Tree";
+    textColor = "text-[#eab308]"; // yellow/orange for flowering/fruiting
+    glowColor = "rgba(234,179,8,0.3)";
   } else {
-    stageName = "Blooming Tree";
-    glowColor = "rgba(236,72,153,0.6)";
-    leafColors = ['#f472b6', '#ec4899', '#db2777', '#fbcfe8', '#f9a8d4']; // Pink blossoms
-    textColor = "text-[#ec4899]";
+    stageName = "Mature Giant";
+    textColor = "text-[#16a34a]";
+    glowColor = "rgba(21,128,61,0.4)";
   }
 
-  // Generate deterministic leaves
+  // --- PROCEDURAL GEOMETRY ---
+  const soilWidth = 100 + t * 150;
+  const soilHeight = 20 + t * 20;
+
+  // 1. Root System
+  const roots = useMemo(() => {
+    const items: any[] = [];
+    if (level < 4) return items;
+    
+    // Taproot
+    const taprootDepth = Math.min(180, (level - 3) * 15);
+    const taprootWidth = 2 + t * 15;
+    items.push({ id: 'tap', path: `M 200 335 Q 195 ${335 + taprootDepth/2} 200 ${335 + taprootDepth}`, width: taprootWidth, isTap: true });
+
+    // Lateral Roots
+    const numLaterals = Math.floor(t * 30);
+    for (let i = 0; i < numLaterals; i++) {
+      const depthOffset = random(i * 100) * taprootDepth;
+      const startY = 335 + depthOffset;
+      const length = 10 + random(i * 101) * (150 * t);
+      const angle = (Math.PI / 2) + (random(i * 102) > 0.5 ? 1 : -1) * (0.3 + random(i * 103));
+      const endX = 200 + Math.cos(angle) * length;
+      const endY = startY + Math.sin(angle) * length;
+      items.push({ id: `lat-${i}`, path: `M 200 ${startY} Q ${200 + (endX-200)/2} ${startY+10} ${endX} ${endY}`, width: Math.max(0.5, taprootWidth * 0.3 * (1 - depthOffset/taprootDepth)), isTap: false });
+    }
+    return items;
+  }, [level, t]);
+
+  // 2. Trunk & Stem
+  const treeHeight = level < 4 ? 0 : 20 + t * 260;
+  const trunkBaseWidth = level < 15 ? (level > 4 ? 2 : 0) : 4 + t * 45;
+  const trunkTopWidth = level < 15 ? (level > 4 ? 1 : 0) : 2 + t * 20;
+  
+  let trunkPath = "";
+  if (level >= 4 && level < 15) {
+    // Arching / straight early stem
+    const archOffset = level < 10 ? 20 - (level-4)*3 : 0; 
+    trunkPath = `M 200 335 Q ${200 + archOffset} ${335 - treeHeight/2} 200 ${335 - treeHeight}`;
+  } else if (level >= 15) {
+    // Thick woody trunk
+    trunkPath = `M ${200 - trunkBaseWidth/2} 335 
+                 Q 195 ${335 - treeHeight/2} ${200 - trunkTopWidth/2} ${335 - treeHeight} 
+                 L ${200 + trunkTopWidth/2} ${335 - treeHeight} 
+                 Q 205 ${335 - treeHeight/2} ${200 + trunkBaseWidth/2} 335 Z`;
+  }
+
+  // 3. Branches
+  const branches = useMemo(() => {
+    const items: any[] = [];
+    if (level < 25) return items;
+    
+    const numBranches = Math.floor(t * 25);
+    for (let i = 0; i < numBranches; i++) {
+      const r1 = random(i * 200);
+      const r2 = random(i * 201);
+      
+      const startY = 335 - (treeHeight * (0.3 + r1 * 0.6));
+      const length = 30 + (r2 * treeHeight * 0.6);
+      const angle = (r1 > 0.5 ? 1 : -1) * (0.3 + r2 * 0.8);
+      
+      const endX = 200 + Math.sin(angle) * length;
+      const endY = startY - Math.cos(angle) * length;
+      const branchWidth = Math.max(1, trunkTopWidth * 0.7 * (1 - r1*0.4));
+      
+      items.push({ id: i, startY, endX, endY, branchWidth, angle });
+    }
+    return items;
+  }, [level, t, treeHeight, trunkTopWidth]);
+
+  // 4. Leaves
   const leaves = useMemo(() => {
     const items: any[] = [];
-    if (level < 2) return items; // No leaves at Level 1
+    if (level < 11) return items; // No leaves until level 11
+    
+    // Leaf colors based on phase
+    let leafPalettes = ['#15803d', '#166534', '#14532d']; // Default dark green
+    if (level <= 20) leafPalettes = ['#9f1239', '#be123c', '#e11d48']; // Reddish purple
+    else if (level <= 30) leafPalettes = ['#84cc16', '#65a30d', '#a3e635']; // Pale green
+    else if (level <= 40) leafPalettes = ['#b45309', '#d97706', '#92400e']; // Copper flush
 
-    // Increase number of leaf clusters significantly as it grows
-    const numLeaves = level < 10 ? Math.floor(1 + (growth * 10)) : Math.floor(10 + (growth * 150)); 
+    const numLeaves = level < 20 ? (level - 10) * 2 : Math.floor(20 + t * 300);
     
     for (let i = 0; i < numLeaves; i++) {
-      const r1 = random(level * 100 + i);
-      const r2 = random(level * 200 + i);
-      const r3 = random(level * 300 + i);
-      
-      const angle = r1 * Math.PI * 2;
-      // Bias towards the center of the canopy for density
-      const radiusDist = Math.sqrt(r2); 
-      
-      let cx = 200 + Math.cos(angle) * (canopyRadiusX * radiusDist);
-      let cy = canopyCenterY + Math.sin(angle) * (canopyRadiusY * radiusDist);
-      
-      const size = (5 + (r3 * 18 * (0.5 + growth / 2))) * (1.2 - radiusDist * 0.4);
-      const color = leafColors[Math.floor(random(level * 400 + i) * leafColors.length)];
-      
-      // If max level, make some petals fall
-      const isFalling = isMaxLevel && r1 > 0.85;
-      if (isFalling) {
-        cy += r2 * 250; // fall down to the ground
+      let cx, cy, angle;
+      if (level < 25) {
+        // Attach directly to early stem
+        cy = 335 - treeHeight * (0.5 + random(i*300)*0.5);
+        cx = 200 + (random(i*301) > 0.5 ? 5 : -5);
+        angle = random(i*301) > 0.5 ? 30 + random(i*302)*30 : 150 - random(i*302)*30;
+      } else {
+        // Attach to branches or canopy area
+        const branch = branches[Math.floor(random(i*303) * branches.length)];
+        if (branch) {
+          const along = random(i*304);
+          cx = 200 + (branch.endX - 200) * along + (random(i*305)-0.5)*20;
+          cy = branch.startY + (branch.endY - branch.startY) * along + (random(i*306)-0.5)*20;
+          angle = (branch.angle * 180 / Math.PI) + (random(i*307)-0.5)*60 + (branch.angle > 0 ? 90 : -90);
+        } else {
+           cx = 200; cy = 335 - treeHeight; angle = 0;
+        }
       }
+
+      const size = 0.5 + t * 0.8 + random(i*308)*0.5;
+      const color = leafPalettes[Math.floor(random(i*309) * leafPalettes.length)];
       
-      items.push({ id: i, cx, cy, size: isFalling ? size * 0.6 : size, color, isFalling });
+      items.push({ id: i, cx, cy, angle, size, color });
     }
     return items;
-  }, [level, growth, canopyRadiusX, canopyRadiusY, canopyCenterY, leafColors, isMaxLevel]);
+  }, [level, t, treeHeight, branches]);
 
-  // Generate branches
-  const branches = useMemo(() => {
-    const items = [];
-    if (level > 15) {
-      const numBranches = Math.floor(growth * 12);
-      for (let i = 0; i < numBranches; i++) {
-        const r1 = random(level * 500 + i);
-        const r2 = random(level * 600 + i);
-        
-        const startY = 340 - (treeHeight * (0.3 + r1 * 0.5));
-        const length = 20 + (r2 * treeHeight * 0.5);
-        const angle = (r1 > 0.5 ? 1 : -1) * (0.5 + r2 * 0.5); // Radians branching outwards
-        
-        const endX = 200 + Math.sin(angle) * length;
-        const endY = startY - Math.cos(angle) * length;
-        const branchWidth = Math.max(1, trunkTopWidth * 0.6 * (1 - r1*0.3));
-        
-        items.push({ id: i, startY, endX, endY, branchWidth });
+  // 5. Flowers (Level 61-80)
+  const flowers = useMemo(() => {
+    const items: any[] = [];
+    if (level >= 61 && level <= 80) {
+      const numFlowers = level <= 70 ? (level - 60) * 15 : (80 - level) * 15; // fade out
+      for (let i = 0; i < numFlowers; i++) {
+        if (branches.length === 0) continue;
+        const branch = branches[Math.floor(random(i*400) * branches.length)];
+        // Cluster near ends of branches
+        const along = 0.7 + random(i*401)*0.3;
+        const cx = 200 + (branch.endX - 200) * along + (random(i*402)-0.5)*30;
+        const cy = branch.startY + (branch.endY - branch.startY) * along + (random(i*403)-0.5)*30;
+        const color = random(i*404) > 0.5 ? '#fde047' : '#fbcfe8'; // yellowish-pink
+        items.push({ id: i, cx, cy, size: 1.5 + random(i*405) });
       }
     }
     return items;
-  }, [level, growth, treeHeight, trunkTopWidth]);
+  }, [level, branches]);
 
-  // Root generation
-  const roots = useMemo(() => {
-    const items = [];
-    if (level > 5) {
-      const numRoots = Math.floor(3 + growth * 8);
-      for (let i = 0; i < numRoots; i++) {
-        const r1 = random(level * 700 + i);
-        const r2 = random(level * 800 + i);
+  // 6. Mangoes (Level 71-100)
+  const mangoes = useMemo(() => {
+    const items: any[] = [];
+    if (level >= 71) {
+      const numMangoes = Math.floor((level - 70) * 0.8); 
+      for (let i = 0; i < numMangoes; i++) {
+        if (branches.length === 0) continue;
+        const branch = branches[Math.floor(random(i*500) * branches.length)];
+        const along = 0.5 + random(i*501)*0.4;
+        const cx = 200 + (branch.endX - 200) * along;
+        const cy = branch.startY + (branch.endY - branch.startY) * along + 10; // hang down
         
-        const length = 10 + (r2 * soilWidth * 0.4);
-        const angle = (Math.PI / 2) + (r1 > 0.5 ? 1 : -1) * (0.2 + r2 * 1.2); // pointing down and out
+        // Colors: green (early) to yellow/orange (ripe)
+        const maturity = Math.min(1, (level - 70) / 20 + random(i*502)*0.2); 
+        const r = Math.floor(34 + maturity * (245 - 34));
+        const g = Math.floor(197 + maturity * (158 - 197));
+        const b = Math.floor(94 + maturity * (11 - 94));
+        const color = `rgb(${r},${g},${b})`;
         
-        const endX = 200 + Math.cos(angle) * length;
-        const endY = 335 + Math.sin(angle) * length * 0.5;
-        const rootWidth = Math.max(1, trunkBaseWidth * 0.3 * (1 - r2));
-        
-        items.push({ id: i, endX, endY, rootWidth });
+        items.push({ id: i, cx, cy, size: 2 + maturity * 3, color });
       }
     }
     return items;
-  }, [level, growth, soilWidth, trunkBaseWidth]);
-
+  }, [level, branches]);
 
   const prevLevelXp = (level - 1) * 50;
   const currentLevelProgress = xp - prevLevelXp;
@@ -154,40 +201,43 @@ export const ProgressionTree = ({ level, xp, nextLevelXp }: { level: number, xp:
 
   return (
     <div className="flex flex-col items-center justify-center p-2 w-full h-full relative overflow-hidden">
-      
-      {/* Background Ambient Glow */}
       <div 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full blur-[80px] pointer-events-none transition-colors duration-1000 z-0"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full blur-[80px] pointer-events-none transition-colors duration-1000 z-0"
         style={{ backgroundColor: glowColor }}
       />
       
-      {/* Container for Tree SVG */}
-      <div className="relative w-full aspect-square max-w-[320px] mx-auto z-10 flex items-end justify-center mb-6">
-        
-        <svg viewBox="0 0 400 400" className="w-full h-full overflow-visible">
+      <div className="relative w-full aspect-square max-w-[360px] mx-auto z-10 flex items-end justify-center mb-6">
+        <svg viewBox="0 0 400 480" className="w-full h-full overflow-visible">
           <defs>
             <linearGradient id="trunkGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#5a3825" />
-              <stop offset="50%" stopColor="#784f33" />
-              <stop offset="100%" stopColor="#4a2e1d" />
+              <stop offset="0%" stopColor="#4a3018" />
+              <stop offset="50%" stopColor="#6b4626" />
+              <stop offset="100%" stopColor="#3d2612" />
             </linearGradient>
             
             <linearGradient id="soilGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#3f2e24" />
-              <stop offset="100%" stopColor="#291e17" />
+              <stop offset="100%" stopColor="#1c140f" />
             </linearGradient>
+            
+            {/* Lanceolate Leaf Definition */}
+            <g id="mangoLeaf">
+              <path d="M 0 0 C 8 -10 20 -4 25 0 C 20 4 8 10 0 0 Z" />
+            </g>
           </defs>
 
-          <g>
+          <g transform="translate(0, 80)"> {/* Shift everything down slightly to fit tall tree */}
+            
             {/* Roots */}
             {roots.map(root => (
               <path 
-                key={`root-${root.id}`}
-                d={`M 200 335 Q ${200 + (root.endX - 200)*0.5} 335 ${root.endX} ${root.endY}`}
+                key={root.id}
+                d={root.path}
                 fill="none"
-                stroke="url(#trunkGrad)"
-                strokeWidth={root.rootWidth}
+                stroke={root.isTap ? "#eab308" : "#ca8a04"}
+                strokeWidth={root.width}
                 strokeLinecap="round"
+                opacity={root.isTap ? 0.8 : 0.6}
                 className="transition-all duration-1000 ease-in-out"
               />
             ))}
@@ -195,40 +245,43 @@ export const ProgressionTree = ({ level, xp, nextLevelXp }: { level: number, xp:
             {/* Soil Mound */}
             <ellipse 
               cx="200" 
-              cy="340" 
+              cy="335" 
               rx={soilWidth / 2} 
               ry={soilHeight} 
               fill="url(#soilGrad)" 
               className="transition-all duration-1000 ease-in-out"
             />
             
-            {/* Trunk */}
-            {level >= 10 && (
+            {/* Golden Seed (Fades out by level 20) */}
+            {level < 20 && (
+              <g 
+                transform={`translate(200, 335) scale(${0.08 * (1 - (level-1)/19)}) translate(-495.5, -814.4)`} 
+                opacity={1 - (level-1)/19} 
+                className="transition-all duration-1000 ease-in-out"
+              >
+                {seedPaths.map((d, i) => (
+                  <path key={`seed-${i}`} fill="#d4af37" d={d} />
+                ))}
+              </g>
+            )}
+
+            {/* Trunk / Stem */}
+            {level >= 4 && level < 15 ? (
               <path 
-                d={`M ${200 - trunkBaseWidth/2} 340 
-                   Q 195 ${340 - treeHeight/2} ${200 - trunkTopWidth/2} ${340 - treeHeight} 
-                   L ${200 + trunkTopWidth/2} ${340 - treeHeight} 
-                   Q 205 ${340 - treeHeight/2} ${200 + trunkBaseWidth/2} 340 Z`}
+                d={trunkPath}
+                fill="none"
+                stroke={level < 10 ? "#a3e635" : "#65a30d"}
+                strokeWidth={2 + (level-4)*0.5}
+                strokeLinecap="round"
+                className="transition-all duration-1000 ease-in-out"
+              />
+            ) : level >= 15 && (
+              <path 
+                d={trunkPath}
                 fill="url(#trunkGrad)"
                 className="transition-all duration-1000 ease-in-out"
               />
             )}
-            
-            {/* Seed stage tiny trunk (sprout) */}
-            {level >= 2 && level < 10 && (
-               <path 
-                d={`M 198 340 L 200 ${340 - treeHeight} L 202 340 Z`}
-                fill="#84cc16"
-                className="transition-all duration-1000 ease-in-out"
-               />
-            )}
-
-            {/* Golden Seed embedded in soil */}
-            <g transform="translate(185, 332) scale(0.065) translate(-450, -850)" opacity={level < 10 ? 1 : 0} className="transition-all duration-1000 ease-in-out">
-              {seedPaths.map((d, i) => (
-                <path key={`seed-${i}`} fill="#d4af37" d={d} />
-              ))}
-            </g>
 
             {/* Branches */}
             {branches.map(branch => (
@@ -243,65 +296,72 @@ export const ProgressionTree = ({ level, xp, nextLevelXp }: { level: number, xp:
                />
             ))}
 
-            {/* Leaves / Canopy */}
+            {/* Leaves */}
             {leaves.map(leaf => (
-              <motion.circle 
+              <use 
                 key={`leaf-${leaf.id}`}
-                initial={leaf.isFalling ? { y: -20, opacity: 0 } : { scale: 0 }}
-                animate={leaf.isFalling ? { 
-                  y: [0, Math.random() * 20 + 20], 
-                  opacity: [0, 1, 0],
-                  x: [0, (Math.random() - 0.5) * 30] 
-                } : { scale: 1 }}
-                transition={leaf.isFalling ? {
-                  duration: 2 + Math.random() * 2,
-                  repeat: Infinity,
-                  delay: Math.random() * 5
-                } : {
-                  type: "spring",
-                  stiffness: 100,
-                  damping: 10,
-                  delay: (leaf.id % 20) * 0.05 // stagger effect
-                }}
-                cx={leaf.cx}
-                cy={leaf.cy}
-                r={leaf.size}
+                href="#mangoLeaf"
+                x={0} y={0}
                 fill={leaf.color}
+                transform={`translate(${leaf.cx}, ${leaf.cy}) rotate(${leaf.angle}) scale(${leaf.size})`}
                 opacity={0.9}
                 className="transition-all duration-1000 ease-in-out"
               />
             ))}
+
+            {/* Flowers */}
+            {flowers.map(flower => (
+              <circle 
+                key={`fl-${flower.id}`}
+                cx={flower.cx}
+                cy={flower.cy}
+                r={flower.size}
+                fill={flower.color}
+                opacity={0.8}
+              />
+            ))}
+
+            {/* Mangoes */}
+            {mangoes.map(mango => (
+              <g key={`mg-${mango.id}`} transform={`translate(${mango.cx}, ${mango.cy})`} className="transition-all duration-1000">
+                {/* Stem */}
+                <line x1={0} y1={0} x2={0} y2={-mango.size*1.5} stroke="#15803d" strokeWidth={mango.size*0.2} />
+                {/* Fruit */}
+                <ellipse cx={0} cy={0} rx={mango.size*0.7} ry={mango.size} fill={mango.color} />
+              </g>
+            ))}
           </g>
         </svg>
 
-        {/* Circular Progress (Hidden if max level) Overlaying the Tree slightly */}
-        {!isMaxLevel && (
-          <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-16 h-16">
-            <svg viewBox="0 0 100 100" className="-rotate-90 w-full h-full drop-shadow-xl">
-              <circle cx="50" cy="50" r="45" fill="rgba(0,0,0,0.4)" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
-              <motion.circle 
-                cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="6" 
-                strokeDasharray="283"
-                strokeDashoffset={283 - (283 * progressPercent) / 100}
-                className={textColor}
-                strokeLinecap="round"
-                initial={{ strokeDashoffset: 283 }}
-                animate={{ strokeDashoffset: 283 - (283 * progressPercent) / 100 }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
-              />
-              <text x="50" y="50" transform="rotate(90 50 50)" textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="24" fontWeight="bold">
-                {level}
-              </text>
-            </svg>
-          </div>
-        )}
       </div>
 
-      <div className="text-center relative z-20">
-        <h3 className={`text-2xl font-black ${textColor} uppercase tracking-widest drop-shadow-md`}>{stageName}</h3>
+      {/* Level Circular Progress */}
+      {!isMaxLevel && (
+        <div className="w-16 h-16 bg-black/40 rounded-full backdrop-blur-sm shadow-xl z-20 mb-2 mt-2">
+          <svg viewBox="0 0 100 100" className="-rotate-90 w-full h-full">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
+            <motion.circle 
+              cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="6" 
+              strokeDasharray="283"
+              strokeDashoffset={283 - (283 * progressPercent) / 100}
+              className={textColor}
+              strokeLinecap="round"
+              initial={{ strokeDashoffset: 283 }}
+              animate={{ strokeDashoffset: 283 - (283 * progressPercent) / 100 }}
+              transition={{ duration: 1.5, ease: "easeOut" }}
+            />
+            <text x="50" y="50" transform="rotate(90 50 50)" textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="26" fontWeight="bold">
+              {level}
+            </text>
+          </svg>
+        </div>
+      )}
+
+      <div className="text-center relative z-20 mt-2">
+        <h3 className={`text-3xl font-black ${textColor} uppercase tracking-widest drop-shadow-md`}>{stageName}</h3>
         {isMaxLevel ? (
-          <p className="text-sm text-white font-bold mt-2 bg-[#ec4899]/20 border border-[#ec4899]/50 px-4 py-2 rounded-full shadow-[0_0_20px_rgba(236,72,153,0.3)]">
-            🌸 A real tree has been planted in your name!
+          <p className="text-sm text-white font-bold mt-2 bg-[#16a34a]/20 border border-[#16a34a]/50 px-4 py-2 rounded-full shadow-[0_0_20px_rgba(22,163,74,0.3)]">
+            🌸 A real mango tree has been planted in your name!
           </p>
         ) : (
           <p className="text-xs text-white/70 font-semibold mt-1 uppercase tracking-wider">
@@ -311,4 +371,4 @@ export const ProgressionTree = ({ level, xp, nextLevelXp }: { level: number, xp:
       </div>
     </div>
   );
-}
+};

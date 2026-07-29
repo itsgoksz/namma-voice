@@ -1,61 +1,60 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { FileText, Trash2, Megaphone, Mic, Leaf, Wind } from "lucide-react";
-
-interface FloatingElement {
-  id: number;
-  x: number;
-  y: number;
-  size: number;
-  opacity: number;
-  rotation: number;
-  IconIndex: number;
-}
-
-const icons = [FileText, Trash2, Megaphone, Mic, Leaf, Wind];
+import { motion } from "framer-motion";
 
 export default function Starfield() {
-  const [elements, setElements] = useState<FloatingElement[]>([]);
-
-  useEffect(() => {
-    // Generate static elements once on client side to avoid hydration mismatch
-    const generated: FloatingElement[] = [];
-    for (let i = 0; i < 25; i++) {
-      generated.push({
-        id: i,
-        x: Math.random() * 100, // percentage
-        y: Math.random() * 100, // percentage
-        size: Math.random() * 20 + 16, // 16px to 36px
-        opacity: Math.random() * 0.15 + 0.1, // 10% to 25% opacity so it's actually visible
-        rotation: Math.random() * 360,
-        IconIndex: Math.floor(Math.random() * icons.length)
-      });
-    }
-    setElements(generated);
-  }, []);
-
-  if (elements.length === 0) return <div className="fixed inset-0 pointer-events-none -z-10" />;
-
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-      {elements.map((el) => {
-        const Icon = icons[el.IconIndex];
-        return (
-          <div
-            key={el.id}
-            className="absolute text-white/20"
-            style={{
-              left: `${el.x}vw`,
-              top: `${el.y}vh`,
-              opacity: el.opacity,
-              transform: `rotate(${el.rotation}deg)`,
-            }}
-          >
-            <Icon size={el.size} strokeWidth={1.5} />
-          </div>
-        );
-      })}
+    <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 bg-[#080808]">
+      {/* Top Left Emerald Orb */}
+      <motion.div
+        animate={{
+          x: [0, 50, -20, 0],
+          y: [0, 30, -50, 0],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+        className="absolute -top-[20%] -left-[20%] w-[500px] h-[500px] md:w-[800px] md:h-[800px] rounded-full"
+        style={{ 
+          background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 70%)'
+        }}
+      />
+      
+      {/* Bottom Right Gold Orb */}
+      <motion.div
+        animate={{
+          x: [0, -60, 30, 0],
+          y: [0, -40, 20, 0],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+        className="absolute -bottom-[20%] -right-[20%] w-[600px] h-[600px] md:w-[900px] md:h-[900px] rounded-full"
+        style={{ 
+          background: 'radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, rgba(212, 175, 55, 0) 70%)'
+        }}
+      />
+
+      {/* Center Crimson Orb */}
+      <motion.div
+        animate={{
+          x: [0, 40, -40, 0],
+          y: [0, -50, 40, 0],
+        }}
+        transition={{
+          duration: 30,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+        className="absolute top-[30%] left-[10%] md:left-[30%] w-[400px] h-[400px] md:w-[700px] md:h-[700px] rounded-full"
+        style={{ 
+          background: 'radial-gradient(circle, rgba(255, 77, 109, 0.1) 0%, rgba(255, 77, 109, 0) 70%)'
+        }}
+      />
     </div>
   );
 }

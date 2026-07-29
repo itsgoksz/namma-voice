@@ -183,14 +183,14 @@ export default function Home() {
         </motion.div>
       </div>
 
-      {/* Daily Checklist */}
       <motion.div 
         initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-        className="p-4 rounded-2xl border border-[#10b981]/20 bg-[#06140e] backdrop-blur-xl z-10 w-full shrink-0 shadow-lg"
+        className="glass-panel p-5 rounded-3xl border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl z-10 w-full shrink-0 shadow-xl"
       >
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-[#d4af37] font-bold text-sm uppercase tracking-widest flex items-center">
-            <Target className="w-4 h-4 mr-2 text-zinc-400" /> Today's Missions
+          <h3 className={`${Object.values(claims).filter(Boolean).length === dailyMissions.length && dailyMissions.length > 0 ? 'text-[#10b981]/70' : 'text-[#ff4d6d]/70'} font-black text-xs uppercase tracking-widest flex items-center`}>
+            <div className={`w-2 h-2 rounded-full mr-2 ${Object.values(claims).filter(Boolean).length === dailyMissions.length && dailyMissions.length > 0 ? 'bg-[#10b981]' : 'bg-[#ff4d6d] animate-ping'}`} /> 
+            Today's Missions
           </h3>
           <div className="flex space-x-1.5">
             {[0, 1, 2].map(i => {

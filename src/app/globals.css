@@ -26,6 +26,10 @@
   --color-text-secondary: var(--text-secondary);
 }
 
+
+
+
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -121,3 +125,4 @@ pwa-camera-modal-instance {
     opacity: 1;
   }
 }
+

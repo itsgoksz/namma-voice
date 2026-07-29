@@ -455,7 +455,7 @@ export default function FeedPage() {
               className="glass-panel rounded-3xl overflow-hidden border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl flex flex-col shadow-[0_8px_32px_rgba(0,0,0,0.4)] cursor-pointer"
             >
               {/* Header */}
-              <div className="p-4 flex flex-wrap gap-3 justify-between items-center bg-[#10b981]/5">
+              <div className="p-4 flex flex-wrap gap-3 justify-between items-center">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-[#10b981]/5 rounded-full flex items-center justify-center text-xl border border-[#10b981]/20">
                     👤
@@ -608,10 +608,10 @@ export default function FeedPage() {
             />
             <motion.div
               layoutId={`post-${activePost.id}`}
-              className="relative w-full max-w-md max-h-full overflow-y-auto glass-panel rounded-3xl overflow-hidden border border-[#10b981]/20 bg-[#0a0a0a] shadow-[0_0_50px_rgba(16,185,129,0.2)] flex flex-col z-10"
+              className="relative w-full max-w-md max-h-full overflow-y-auto glass-panel rounded-3xl overflow-hidden border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-[0_0_50px_rgba(16,185,129,0.2)] flex flex-col z-10"
             >
               {/* Header */}
-              <div className="p-4 flex justify-between items-center bg-[#10b981]/5">
+              <div className="p-4 flex justify-between items-center">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-[#10b981]/5 rounded-full flex items-center justify-center text-xl border border-[#10b981]/20">👤</div>
                   <div>

@@ -37,13 +37,35 @@ interface GarbageMapProps {
   userLoc?: { lat: number; lng: number } | null;
 }
 
+function DynamicZoomController() {
+  const map = useMap();
+  
+  useEffect(() => {
+    // getBoundsZoom with inside=true calculates the lowest zoom level where the 
+    // device's viewport perfectly fits INSIDE the bounding box.
+    // This mathematically guarantees maxBounds will never glitch on any device!
+    const bounds = L.latLngBounds(allowedBounds as L.LatLngBoundsLiteral);
+    const safeMinZoom = map.getBoundsZoom(bounds, true);
+    
+    map.setMinZoom(safeMinZoom);
+    if (map.getZoom() < safeMinZoom) {
+      map.setZoom(safeMinZoom);
+    }
+  }, [map]);
+
+  return null;
+}
+
 function LocationTracker({ loc }: { loc?: { lat: number; lng: number } | null }) {
   const map = useMap();
   const [hasCentered, setHasCentered] = useState(false);
 
   useEffect(() => {
     if (loc && !hasCentered) {
-      map.flyTo([loc.lat, loc.lng], 15, { animate: true, duration: 1.5 });
+      // Use panTo instead of flyTo. panTo is a pure CSS transform translation 
+      // which is hardware accelerated and buttery smooth on mobile, whereas flyTo 
+      // calculates complex zoom interpolation frames which decimates mobile CPUs.
+      map.panTo([loc.lat, loc.lng], { animate: true, duration: 1.5, easeLinearity: 0.25 });
       setHasCentered(true);
     }
   }, [loc, map, hasCentered]);
@@ -100,15 +122,20 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
         center={userLoc ? [userLoc.lat, userLoc.lng] : center}
         zoom={14}
         minZoom={13}
+        maxZoom={22}
         maxBounds={allowedBounds}
         maxBoundsViscosity={1.0}
+        preferCanvas={true}
         scrollWheelZoom={true}
         className="w-full h-full bg-transparent"
         zoomControl={false}
         attributionControl={false}
       >
+        <DynamicZoomController />
+        
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          maxZoom={22}
         />
 
         <LocationTracker loc={userLoc} />
@@ -141,6 +168,7 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
           spiderfyOnMaxZoom={false}
           showCoverageOnHover={false}
           maxClusterRadius={40}
+          animate={false}
           zoomToBoundsOnClick={true}
           disableClusteringAtZoom={17}
           iconCreateFunction={(cluster: any) => {
@@ -279,14 +307,9 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
         <h3 className="text-white font-bold text-sm leading-tight">South Bengaluru</h3>
         <p className="text-[#ff4d6d] font-black text-[10px] mb-1.5">{hotspots.length} reports live</p>
         
-        <div className="bg-[#d4af37]/10 border border-[#d4af37]/30 rounded p-1.5 flex items-center gap-1.5">
-          <div className="w-5 h-5 rounded-full bg-[#d4af37] flex items-center justify-center shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>
-          </div>
-          <div>
-            <p className="text-[9px] text-[#d4af37]/80 font-bold uppercase tracking-widest leading-none">Sector Guardian</p>
-            <p className="text-white font-black text-xs leading-none mt-0.5">@{guardian}</p>
-          </div>
+        <div className="mt-2 flex flex-col">
+          <p className="text-[9px] text-[#d4af37] font-bold uppercase tracking-widest leading-none">Sector Guardian</p>
+          <p className="text-white font-black text-xs leading-none mt-1">@{guardian}</p>
         </div>
       </div>
 
