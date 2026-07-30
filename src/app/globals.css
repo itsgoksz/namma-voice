@@ -100,21 +100,19 @@ pwa-camera-modal-instance {
   z-index: 9999999 !important;
 }
 
-/* Custom Black Leaflet Popup */
-.leaflet-container {
-  border: none !important;
-  outline: none !important;
+/* Custom Black MapLibre Popup */
+.custom-maplibre-popup .maplibregl-popup-content {
   background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
 }
-
-.custom-popup .leaflet-popup-content-wrapper,
-.custom-popup .leaflet-popup-tip {
-  background: #000000 !important;
-  color: white !important;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.custom-maplibre-popup .maplibregl-popup-tip {
+  border-top-color: #18181b !important;
+  border-bottom-color: transparent !important;
 }
-.custom-popup .leaflet-popup-content-wrapper {
-  border-radius: 12px;
+.custom-maplibre-popup .maplibregl-popup-close-button {
+  display: none !important;
 }
 
 @keyframes twinkle {
@@ -126,3 +124,5 @@ pwa-camera-modal-instance {
   }
 }
 
+
+@import "maplibre-gl/dist/maplibre-gl.css";
