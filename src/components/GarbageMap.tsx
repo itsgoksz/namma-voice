@@ -18,6 +18,30 @@ const allowedBounds: [number, number, number, number] = [
   77.625, 12.945  // North East [lng, lat]
 ];
 
+const rasterMapStyle = {
+  version: 8,
+  sources: {
+    'carto-dark': {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+      ],
+      tileSize: 256
+    }
+  },
+  layers: [
+    {
+      id: 'carto-dark-layer',
+      type: 'raster',
+      source: 'carto-dark',
+      minzoom: 0,
+      maxzoom: 22
+    }
+  ]
+};
+
 interface Hotspot {
   id: number;
   pos: [number, number]; // [lat, lng]
@@ -148,29 +172,7 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
         {...viewState}
         onMove={evt => setViewState(evt.viewState)}
         ref={mapRef}
-        mapStyle={{
-          version: 8,
-          sources: {
-            'carto-dark': {
-              type: 'raster',
-              tiles: [
-                'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-                'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-                'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-              ],
-              tileSize: 256
-            }
-          },
-          layers: [
-            {
-              id: 'carto-dark-layer',
-              type: 'raster',
-              source: 'carto-dark',
-              minzoom: 0,
-              maxzoom: 22
-            }
-          ]
-        }}
+        mapStyle={rasterMapStyle as any}
         maxBounds={allowedBounds}
         maxZoom={22}
         minZoom={13}
