@@ -375,22 +375,17 @@ export default function FeedPage() {
         }
       }
       
-      // Update under review status (but still grant XP immediately for instant gratification)
+      // Update under review status
+      // (The Postgres Database Trigger will securely detect this status change 
+      // and grant XP immediately to all squad members automatically!)
       await supabase.from('reports').update({ 
         cleanup_image_base64: splitModalData!.imageUrl, 
         status: 'UNDER_REVIEW',
         cleanup_squad: squad,
         cleanup_timestamp: new Date().toISOString()
       }).eq('id', splitModalData!.id);
-
-      // Instant Gratification: Grant correct XP immediately to all squad members
+      
       const xpReward = getSeverityXP(splitModalData!.severity);
-      const { data: squadUsers } = await supabase.from('users').select('name, xp').in('name', squad);
-      if (squadUsers) {
-        for (const u of squadUsers) {
-          await supabase.from('users').update({ xp: (u.xp || 0) + xpReward }).eq('name', u.name);
-        }
-      }
       
       setSplitModalData(null);
       setSplitUsernames(['', '']);

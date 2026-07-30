@@ -154,7 +154,7 @@ export default function LeaderboardPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="glass-panel rounded-3xl overflow-y-auto flex-1 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] pb-4"
+        className="glass-panel rounded-3xl overflow-y-auto flex-1 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.4)] pb-4"
       >
         {leaders.map((user, index) => {
           // If we have >= 3 users, skip the first 3 for the list, unless it's just 1 or 2 users total
@@ -198,7 +198,7 @@ export default function LeaderboardPage() {
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="glass-panel rounded-3xl overflow-y-auto flex-1 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-4 space-y-4"
+          className="glass-panel rounded-3xl overflow-y-auto flex-1 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-4 space-y-4"
         >
           {areaStats.sort((a,b) => b.reports + b.cleanups - (a.reports + a.cleanups)).map((area, index) => (
             <div key={area.area} className="bg-black/40 rounded-2xl p-4 border border-white/5 flex flex-col space-y-3 relative overflow-hidden">

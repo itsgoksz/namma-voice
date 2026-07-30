@@ -51,11 +51,21 @@ export default function Home() {
     return null;
   });
   
+  const [isOutOfBounds, setIsOutOfBounds] = useState(false);
   const [streak, setStreak] = useState(0);
   const [isMissionDismissed, setIsMissionDismissed] = useState(false);
   const [dailyMissions, setDailyMissions] = useState<Mission[]>([]);
   const [claims, setClaims] = useState<Record<string, boolean>>({});
   const [completions, setCompletions] = useState<Record<string, boolean>>({});
+
+  const checkBounds = (lat: number, lng: number) => {
+    // strict allowedBounds: [12.865, 77.550] to [12.945, 77.625]
+    if (lat < 12.865 || lat > 12.945 || lng < 77.550 || lng > 77.625) {
+      setIsOutOfBounds(true);
+    } else {
+      setIsOutOfBounds(false);
+    }
+  };
 
   useEffect(() => {
     if (sessionStorage.getItem('namma_mission_dismissed') === 'true') {
@@ -77,10 +87,11 @@ export default function Home() {
     setClaims(prev => ({ ...prev, [mission.id]: true }));
     localStorage.setItem(`namma_mission_${today}_${mission.id}_claimed`, 'true');
     try {
-      const { data } = await supabase.from('users').select('xp').eq('name', getCurrentUser()).single();
-      if (data) {
-        await supabase.from('users').update({ xp: data.xp + mission.xp }).eq('name', getCurrentUser());
-      }
+      // Use secure Server RPC instead of raw client update
+      await supabase.rpc('add_mission_xp', { 
+        user_name: getCurrentUser(), 
+        amount: mission.xp 
+      });
     } catch (e) {
       console.error(e);
     }
@@ -99,6 +110,7 @@ export default function Home() {
         }, (pos, err) => {
           if (pos) {
             setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            checkBounds(pos.coords.latitude, pos.coords.longitude);
           }
         });
       } catch (e) {
@@ -117,6 +129,7 @@ export default function Home() {
         // Guarantee location within 1.5s max (cache -> GPS -> JP Nagar fallback)
         const loc = await getFastLocation();
         setUserLoc(loc);
+        checkBounds(loc.lat, loc.lng);
         
         let closest: any = null;
         let minDistance = Infinity;
@@ -171,6 +184,23 @@ export default function Home() {
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${closestMission.lat},${closestMission.lng}`, '_blank');
     }
   };
+
+  if (isOutOfBounds) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center p-6 text-center bg-black/95 relative z-50 pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)]">
+        <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/30">
+          <MapPin className="w-12 h-12 text-red-500" />
+        </div>
+        <h1 className="text-3xl font-black text-white mb-3">Outside Service Area</h1>
+        <p className="text-zinc-400 font-medium mb-8 max-w-xs">
+          Namma Voice is currently only active in South Bengaluru (Jayanagar, JP Nagar, BTM Layout). 
+          You must be physically located in these areas to access the map and reports.
+        </p>
+        <div className="w-full h-px bg-white/10 my-4" />
+        <p className="text-[#10b981] font-bold text-sm">We are expanding soon!</p>
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-full overflow-hidden w-full flex flex-col px-4 pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] space-y-4">

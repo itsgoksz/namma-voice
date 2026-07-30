@@ -120,7 +120,7 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
     <div className="w-full h-full relative z-0 bg-black">
       <MapContainer
         center={userLoc ? [userLoc.lat, userLoc.lng] : center}
-        zoom={14}
+        zoom={15}
         minZoom={13}
         maxZoom={22}
         maxBounds={allowedBounds}
@@ -146,19 +146,19 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
             icon={L.divIcon({
               className: 'user-location-marker',
               html: `
-                <div class="relative flex items-center justify-center w-12 h-12">
-                  <div class="absolute inset-0 bg-[#3b82f6] rounded-full opacity-30 animate-ping"></div>
-                  <div class="absolute inset-2 bg-[#3b82f6]/20 rounded-full border-2 border-[#3b82f6] shadow-[0_0_15px_#3b82f6] flex items-center justify-center backdrop-blur-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  </div>
+                <div class="relative flex items-center justify-center w-12 h-12 -mt-6">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-12 h-12 filter drop-shadow-[0_0_12px_rgba(173,195,75,0.9)]">
+                    <!-- Clean, solid lime green pin with a circular hole -->
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2c-4.42 0-8 3.58-8 8 0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" fill="#adc34b" />
+                  </svg>
                 </div>
               `,
               iconSize: [48, 48],
-              iconAnchor: [24, 24]
+              iconAnchor: [24, 48]
             })}
           >
             <Popup className="custom-popup">
-              <div className="font-bold text-[#3b82f6] text-center">Eco-Warrior (You)</div>
+              <div className="font-black text-[#adc34b] text-center tracking-wide uppercase text-xs">You (Eco-Guardian)</div>
             </Popup>
           </Marker>
         )}

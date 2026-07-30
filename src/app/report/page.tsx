@@ -18,14 +18,28 @@ const SEVERITIES = [
   { value: 4, label: "Critical", desc: "Biohazard", icon: AlertOctagon, color: "text-[#ff4d6d]", bg: "bg-[#ff4d6d]", border: "border-[#ff4d6d]" }
 ];
 
+// Haversine formula to calculate distance between two coordinates in meters
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3; 
+  const p1 = lat1 * Math.PI/180;
+  const p2 = lat2 * Math.PI/180;
+  const dp = (lat2-lat1) * Math.PI/180;
+  const dl = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return Math.round(R * c);
+}
+
 export default function ReportPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const [severity, setSeverity] = useState<number | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const takePhoto = async () => {
+    setErrorMsg(null);
     try {
       try {
         const permissions = await Camera.requestPermissions({ permissions: ['camera'] });
@@ -52,10 +66,34 @@ export default function ReportPage() {
   const handleSubmit = async () => {
     if (!photo || !severity) return;
     setIsSubmitting(true);
+    setErrorMsg(null);
     const finalLocation = await getFastLocation();
     const username = getCurrentUser();
 
     try {
+      // Spam Check: Max 5 reports per hour within a 50m radius
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { data: recentReports } = await supabase
+        .from('reports')
+        .select('lat, lng')
+        .eq('username', username)
+        .gte('timestamp', oneHourAgo);
+
+      if (recentReports) {
+        let nearbyCount = 0;
+        recentReports.forEach(r => {
+          if (getDistance(finalLocation.lat, finalLocation.lng, r.lat, r.lng) < 50) {
+            nearbyCount++;
+          }
+        });
+        
+        if (nearbyCount >= 5) {
+          setErrorMsg("Spam prevented: You've already made 5 reports in this specific area in the last hour. Please move to a new location to continue earning XP.");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const compressedPhoto = await compressImageBase64(photo);
       
       let imageUrl = null;
@@ -84,16 +122,7 @@ export default function ReportPage() {
       try {
         const { error } = await supabase.from('reports').insert([payload]);
         if (error) throw error;
-
-        // Grant 10 XP instantly for reporting
-        const { data: user } = await supabase.from('users').select('xp, reports_count').eq('name', username).single();
-        if (user) {
-          const newXp = (user.xp || 0) + 10;
-          await supabase.from('users').update({ 
-            xp: newXp,
-            reports_count: (user.reports_count || 0) + 1 
-          }).eq('name', username);
-        }
+        // XP is now securely awarded by the Postgres Trigger automatically!
       } catch (e) {
         console.warn("Network failed, enqueuing offline task", e);
         await enqueueOfflineTask('/reports', 'POST', payload);
@@ -140,6 +169,13 @@ export default function ReportPage() {
       >
         <h1 className="text-3xl font-bold text-white tracking-tight truncate w-full">Report Issue</h1>
       </motion.div>
+
+      {errorMsg && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl flex items-start space-x-3">
+          <AlertOctagon className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+          <p className="text-sm font-medium text-red-200 leading-snug">{errorMsg}</p>
+        </motion.div>
+      )}
 
       <motion.div 
         onClick={!photo ? takePhoto : undefined}

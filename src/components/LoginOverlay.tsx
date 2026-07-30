@@ -76,6 +76,16 @@ export default function LoginOverlay() {
         
       } else {
         // Handle Sign Up
+
+        // Anti-spam registration rate limit (max 3 per day per device)
+        const today = new Date().toISOString().split('T')[0];
+        const regCount = parseInt(localStorage.getItem(`namma_reg_count_${today}`) || '0');
+        if (regCount >= 3) {
+          setErrorMsg("Device limit reached. You can only create 3 accounts per day from this device to prevent spam.");
+          setIsLoading(false);
+          return;
+        }
+
         const passValidation = validatePassword(password);
         if (!passValidation.valid) {
           setErrorMsg(passValidation.message);
@@ -121,6 +131,7 @@ export default function LoginOverlay() {
 
         await supabase.from('users').insert([{ name: trimmedName, area }]);
 
+        localStorage.setItem(`namma_reg_count_${today}`, (regCount + 1).toString());
         localStorage.setItem("namma_user", trimmedName);
         setIsOpen(false);
       }

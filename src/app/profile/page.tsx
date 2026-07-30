@@ -126,7 +126,7 @@ export default function ProfilePage() {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1 }}
-        className="glass-panel p-5 rounded-3xl mt-6 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-xl flex justify-center overflow-hidden"
+        className="glass-panel p-5 rounded-3xl mt-6 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-md shadow-xl flex justify-center overflow-hidden"
       >
         <ProgressionTree level={user.level} xp={user.xp} nextLevelXp={nextLevelXp} />
       </motion.div>
@@ -138,24 +138,24 @@ export default function ProfilePage() {
       >
         <h3 className="text-xl font-bold text-white mb-4">Your Stats</h3>
         <div className="grid grid-cols-2 gap-4">
-          <div className="glass-panel p-5 rounded-3xl border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-xl">
+          <div className="glass-panel p-5 rounded-3xl border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-md shadow-xl">
             <Flame className="w-6 h-6 text-[#ff9f1c] mb-3" />
             <p className="text-3xl font-black text-white">{streak}</p>
             <p className="text-xs text-white/70 font-bold uppercase tracking-widest mt-1">Day Streak</p>
           </div>
-          <div className="glass-panel p-5 rounded-3xl border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-xl">
+          <div className="glass-panel p-5 rounded-3xl border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-md shadow-xl">
             <Award className="w-6 h-6 text-[#3a86ff] mb-3" />
             <p className="text-3xl font-black text-white">{user.reports_count}</p>
             <p className="text-xs text-white/70 font-bold uppercase tracking-widest mt-1">Total Reports</p>
           </div>
-          <div className="glass-panel p-5 rounded-3xl border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl shadow-xl flex items-center justify-between">
+          <div className="glass-panel p-5 rounded-3xl border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-md shadow-xl flex items-center justify-between">
             <div>
               <p className="text-3xl font-black text-white">{cleanupsCount}</p>
               <p className="text-xs text-white/70 font-bold uppercase tracking-widest mt-1">Total Cleanups</p>
             </div>
             <Leaf className="w-10 h-10 text-[#10b981]" />
           </div>
-          <div className="glass-panel p-5 rounded-3xl border border-[#d4af37]/30 bg-[#d4af37]/10 backdrop-blur-2xl shadow-xl flex items-center justify-between">
+          <div className="glass-panel p-5 rounded-3xl border border-[#d4af37]/30 bg-[#d4af37]/10 backdrop-blur-md shadow-xl flex items-center justify-between">
             <div>
               <p className="text-3xl font-black text-[#d4af37]">{user.eco_credits || 0}</p>
               <p className="text-[10px] text-[#d4af37]/70 font-bold uppercase tracking-widest mt-1">Eco Credits</p>
