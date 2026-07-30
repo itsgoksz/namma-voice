@@ -10,6 +10,19 @@ import { supabase } from "@/lib/supabase";
 import { Camera as CameraIcon, MapPin, Clock, Megaphone, Info, AlertTriangle, Flame, AlertOctagon, CheckCircle2, Target, Users, Zap, Star, CalendarDays } from "lucide-react";
 import { cn, compressImageBase64 } from "@/lib/utils";
 import { enqueueOfflineTask } from "@/lib/offlineSync";
+import { Geolocation } from "@capacitor/geolocation";
+
+// Haversine formula to calculate distance between two coordinates in meters
+function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3;
+  const p1 = lat1 * Math.PI / 180;
+  const p2 = lat2 * Math.PI / 180;
+  const dp = (lat2 - lat1) * Math.PI / 180;
+  const dl = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 const SEVERITIES = [
   { value: 'light', label: "Light", color: "text-zinc-400" },
@@ -300,6 +313,23 @@ export default function FeedPage() {
   const handleCleanup = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
     try {
+      const post = feed.find(p => p.id === id) || cachedFeed?.find(p => p.id === id);
+      if (!post) return;
+
+      try {
+        await Geolocation.requestPermissions();
+        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+        const dist = getDistanceInMeters(pos.coords.latitude, pos.coords.longitude, post.lat, post.lng);
+        
+        if (dist > 50) {
+          alert(`You are too far from the garbage location! (${Math.round(dist)}m away)\n\nYou must be physically present at the exact location to clean it up.`);
+          return;
+        }
+      } catch (err) {
+        alert("Failed to get your location. Please enable GPS to clean up this spot.");
+        return;
+      }
+
       try {
         const permissions = await Camera.requestPermissions({ permissions: ['camera'] });
         if (permissions.camera === 'denied' || permissions.camera === 'prompt-with-rationale') {
