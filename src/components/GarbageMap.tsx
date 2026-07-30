@@ -86,11 +86,25 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
       );
       const data = await response.json();
       if (data.routes?.length > 0) {
-        setActiveRoute(data.routes[0].geometry.coordinates);
+        const coords = data.routes[0].geometry.coordinates;
+        setActiveRoute(coords);
         setSelectedSpot(null); // Hide popup to view route
+        
+        // Calculate bounding box of the route to fit the camera
+        const routeBounds = coords.reduce((acc: [[number, number], [number, number]], coord: [number, number]) => {
+          return [
+            [Math.min(acc[0][0], coord[0]), Math.min(acc[0][1], coord[1])],
+            [Math.max(acc[1][0], coord[0]), Math.max(acc[1][1], coord[1])]
+          ] as [[number, number], [number, number]];
+        }, [[Infinity, Infinity], [-Infinity, -Infinity]]);
+        
+        if (mapRef.current) {
+          mapRef.current.fitBounds(routeBounds, { padding: 60, duration: 1500 });
+        }
       }
     } catch (error) {
       console.error("Failed to fetch route:", error);
+      alert("Failed to fetch routing data. Please try again.");
     } finally {
       setIsRouting(false);
     }
@@ -178,34 +192,38 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
         minZoom={13}
         attributionControl={false}
       >
-        {activeRoute && (
-          <Source 
-            id="route" 
-            type="geojson" 
-            data={{
+        <Source 
+          id="route" 
+          type="geojson" 
+          data={{
+            type: "FeatureCollection",
+            features: activeRoute ? [{
               type: "Feature",
               properties: {},
               geometry: {
                 type: "LineString",
                 coordinates: activeRoute
               }
+            }] : []
+          }}
+        >
+          <Layer
+            id="route-layer"
+            type="line"
+            source="route"
+            layout={{
+              "line-join": "round",
+              "line-cap": "round",
+              "visibility": activeRoute && activeRoute.length > 0 ? "visible" : "none"
             }}
-          >
-            <Layer
-              id="route-layer"
-              type="line"
-              layout={{
-                "line-join": "round",
-                "line-cap": "round"
-              }}
-              paint={{
-                "line-color": "#f14f4f",
-                "line-width": 6,
-                "line-opacity": 0.8
-              }}
-            />
-          </Source>
-        )}
+            paint={{
+              "line-color": "#f14f4f",
+              "line-width": 6,
+              "line-opacity": 1
+            }}
+          />
+        </Source>
+        
         {userLoc && (
           <Marker
             longitude={userLoc.lng}
