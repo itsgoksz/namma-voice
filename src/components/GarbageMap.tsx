@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import * as maplibregl from "maplibre-gl";
 import Map, { Marker, Popup, MapRef, Source, Layer } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+
+if (typeof window !== 'undefined') {
+  maplibregl.setWorkerUrl("https://unpkg.com/maplibre-gl@6.0.0/dist/maplibre-gl-worker.mjs");
+}
+
 import useSupercluster from "use-supercluster";
 import { getImageUrl } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
@@ -192,37 +198,38 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
         minZoom={13}
         attributionControl={false}
       >
-        <Source 
-          id="route" 
-          type="geojson" 
-          data={{
-            type: "FeatureCollection",
-            features: activeRoute ? [{
-              type: "Feature",
-              properties: {},
-              geometry: {
-                type: "LineString",
-                coordinates: activeRoute
-              }
-            }] : []
-          }}
-        >
-          <Layer
-            id="route-layer"
-            type="line"
-            source="route"
-            layout={{
-              "line-join": "round",
-              "line-cap": "round",
-              "visibility": activeRoute && activeRoute.length > 0 ? "visible" : "none"
+        {activeRoute && activeRoute.length > 0 && (
+          <Source 
+            id="route" 
+            type="geojson" 
+            data={{
+              type: "FeatureCollection",
+              features: [{
+                type: "Feature",
+                properties: {},
+                geometry: {
+                  type: "LineString",
+                  coordinates: activeRoute
+                }
+              }]
             }}
-            paint={{
-              "line-color": "#f14f4f",
-              "line-width": 6,
-              "line-opacity": 1
-            }}
-          />
-        </Source>
+          >
+            <Layer
+              id="route-layer"
+              type="line"
+              source="route"
+              layout={{
+                "line-join": "round",
+                "line-cap": "round"
+              }}
+              paint={{
+                "line-color": "#f14f4f",
+                "line-width": 6,
+                "line-opacity": 1
+              }}
+            />
+          </Source>
+        )}
         
         {userLoc && (
           <Marker
