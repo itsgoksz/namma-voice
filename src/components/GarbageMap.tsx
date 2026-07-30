@@ -124,7 +124,7 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
         minZoom={13}
         maxZoom={22}
         maxBounds={allowedBounds}
-        maxBoundsViscosity={1.0}
+        maxBoundsViscosity={0.8}
         preferCanvas={true}
         scrollWheelZoom={true}
         className="w-full h-full bg-transparent"
