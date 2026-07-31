@@ -471,7 +471,7 @@ export default function GarbageMap({ userLoc, externalRouteDest }: GarbageMapPro
 
       {/* Overlays */}
       {guardian && (
-        <div className="absolute bottom-6 left-4 z-[999] pointer-events-auto">
+        <div className="absolute bottom-4 left-4 z-[999] pointer-events-auto">
           <div className="glass-panel p-3.5 rounded-2xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
             <h4 className="text-white font-black text-sm mb-1 tracking-wide flex items-center">
               South Bengaluru 
