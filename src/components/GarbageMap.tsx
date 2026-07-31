@@ -123,6 +123,9 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
   const [isRouting, setIsRouting] = useState(false);
   const [isLiveNavigation, setIsLiveNavigation] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
+  const [routeSteps, setRouteSteps] = useState<any[] | null>(null);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const offRouteCounter = useRef(0);
 
   // Sync externalRouteDest to currentDestination
   useEffect(() => {
@@ -149,13 +152,18 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
           const start = { lng: userLoc.lng, lat: userLoc.lat };
           const end = { lng: currentDestination.lng, lat: currentDestination.lat };
           const response = await fetch(
-            `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`
+            `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson&steps=true`
           );
           const data = await response.json();
           if (data.routes?.length > 0) {
             const coords = data.routes[0].geometry.coordinates;
+            const steps = data.routes[0].legs[0]?.steps || [];
+            
             setFullRoute(coords);
             setActiveRoute(coords);
+            setRouteSteps(steps);
+            setCurrentStepIndex(0);
+            offRouteCounter.current = 0;
             
             const routeBounds = coords.reduce((acc: [[number, number], [number, number]], coord: [number, number]) => {
               return [
@@ -193,12 +201,34 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
     const offRouteDist = Math.min(dist1, dist2);
 
     if (offRouteDist > 50 && closestIdx < fullRoute.length - 2) {
-       // Off route (> 50m). Clear fullRoute to trigger re-fetch from current userLoc!
-       setFullRoute(null);
+       offRouteCounter.current += 1;
+       if (offRouteCounter.current >= 3) {
+         setFullRoute(null);
+         offRouteCounter.current = 0;
+       }
     } else {
+       offRouteCounter.current = 0;
        // Snap user to route and prune history
        const prunedRoute = [userPoint, ...fullRoute.slice(closestIdx + 1)];
        setActiveRoute(prunedRoute);
+       
+       // Step progression
+       setRouteSteps(steps => {
+         if (steps && steps.length > 0) {
+           setCurrentStepIndex(idx => {
+             if (idx < steps.length) {
+               const currentStep = steps[idx];
+               const maneuverLoc = currentStep.maneuver.location; // [lng, lat]
+               const distToManeuver = getDistanceInMeters(userPoint[1], userPoint[0], maneuverLoc[1], maneuverLoc[0]);
+               if (distToManeuver < 25) {
+                 return idx + 1; // Advance step
+               }
+             }
+             return idx;
+           });
+         }
+         return steps;
+       });
     }
   }, [userLoc, fullRoute]);
 
@@ -253,12 +283,21 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
     }
   }, [userLoc, hasCentered, isLiveNavigation]);
 
-  // Live Navigation tracking
+  // Live Navigation tracking with Low-Pass filter for bearing
   useEffect(() => {
     if (isLiveNavigation && userLoc && mapRef.current) {
+      const currentBearing = mapRef.current.getBearing();
+      let targetBearing = userLoc.heading ?? currentBearing;
+      
+      let diff = targetBearing - currentBearing;
+      while (diff <= -180) diff += 360;
+      while (diff > 180) diff -= 360;
+      
+      const smoothedBearing = currentBearing + diff * 0.15; // LPF: 15% new, 85% old
+      
       mapRef.current.easeTo({
         center: [userLoc.lng, userLoc.lat],
-        bearing: userLoc.heading || mapRef.current.getBearing(),
+        bearing: smoothedBearing,
         pitch: 60,
         zoom: 18,
         duration: 1000,
@@ -578,6 +617,36 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
         )}
       </AnimatePresence>
       
+      {/* Turn-by-Turn Instruction Overlay */}
+      <AnimatePresence>
+        {isLiveNavigation && routeSteps && currentStepIndex < routeSteps.length && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-6 left-1/2 -translate-x-1/2 z-[999] pointer-events-auto w-[90%] max-w-sm"
+          >
+            <div className="glass-panel p-4 rounded-3xl border border-[#10b981]/20 shadow-[0_15px_40px_rgba(0,0,0,0.6)] flex items-center space-x-4">
+              <div className="w-12 h-12 rounded-full bg-[#10b981]/20 flex items-center justify-center border border-[#10b981]/30 text-[#10b981]">
+                <Navigation className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <p className="text-white font-black text-lg leading-tight drop-shadow-md">
+                  {routeSteps[currentStepIndex].maneuver.modifier 
+                    ? `Turn ${routeSteps[currentStepIndex].maneuver.modifier.replace(/-/g, ' ')}` 
+                    : routeSteps[currentStepIndex].maneuver.type === 'arrive' 
+                      ? "Arrive at destination" 
+                      : "Continue straight"}
+                </p>
+                <p className="text-[#10b981] font-bold text-sm">
+                  {routeSteps[currentStepIndex].name || "Unnamed road"} • {Math.round(routeSteps[currentStepIndex].distance)}m
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Navigation Overlays */}
       {activeRoute && (
         <div className="absolute bottom-4 right-4 z-[999] pointer-events-auto flex flex-col space-y-3 items-end">
