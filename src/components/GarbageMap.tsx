@@ -489,7 +489,7 @@ export default function GarbageMap({ userLoc, externalRouteDest }: GarbageMapPro
       
       {/* Navigation Overlays */}
       {activeRoute && (
-        <div className="absolute bottom-6 right-20 z-[999] pointer-events-auto flex flex-col space-y-3 items-end">
+        <div className="absolute bottom-4 right-20 z-[999] pointer-events-auto flex flex-col space-y-3 items-end">
           {!isLiveNavigation ? (
             <button
               onClick={() => setIsLiveNavigation(true)}
