@@ -83,6 +83,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
   const [activeRoute, setActiveRoute] = useState<[number, number][] | null>(null);
   const [isRouting, setIsRouting] = useState(false);
   const [isLiveNavigation, setIsLiveNavigation] = useState(false);
+  const [showUserPopup, setShowUserPopup] = useState(false);
 
   const handleNavigate = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -299,11 +300,15 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
             latitude={userLoc.lat}
             anchor="bottom"
           >
-            <div className="relative flex flex-col items-center justify-center w-24">
-              <div className="bg-black/80 px-2 py-0.5 rounded text-[10px] font-black text-[#adc34b] tracking-wide uppercase mb-1">
-                You (Eco-Guardian)
-              </div>
-              <div className="relative w-12 h-12 flex items-center justify-center">
+            <div className="relative flex flex-col items-center justify-center w-12 h-12">
+              <div 
+                className="relative w-12 h-12 flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-95"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowUserPopup(true);
+                  setSelectedSpot(null);
+                }}
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-12 h-12 filter drop-shadow-[0_0_12px_rgba(173,195,75,0.9)]">
                   <path fillRule="evenodd" clipRule="evenodd" d="M12 2c-4.42 0-8 3.58-8 8 0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" fill="#adc34b" />
                 </svg>
@@ -472,6 +477,34 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                    </button>
                  </>
               )}
+            </div>
+          </Popup>
+        )}
+
+        {showUserPopup && userLoc && (
+          <Popup
+            longitude={userLoc.lng}
+            latitude={userLoc.lat}
+            anchor="bottom"
+            onClose={() => setShowUserPopup(false)}
+            closeOnClick={false}
+            className="custom-maplibre-popup z-[1000]"
+            maxWidth="200px"
+            offset={[0, -48]}
+          >
+            <div className="bg-black/90 backdrop-blur-xl border border-[#adc34b]/30 p-3 rounded-2xl shadow-xl flex items-center space-x-3 relative pr-8">
+              <button 
+                onClick={(e) => { e.stopPropagation(); setShowUserPopup(false); }}
+                className="absolute top-1.5 right-1.5 p-1 text-zinc-400 hover:text-white rounded-full bg-white/5 active:scale-95 transition-transform"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+              <div className="w-8 h-8 rounded-full bg-[#adc34b]/20 flex items-center justify-center flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-5 h-5 text-[#adc34b]">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2c-4.42 0-8 3.58-8 8 0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" fill="currentColor" />
+                </svg>
+              </div>
+              <h3 className="text-[#adc34b] font-black text-xs tracking-wide uppercase leading-tight">You<br/>(Eco-Guardian)</h3>
             </div>
           </Popup>
         )}
