@@ -155,7 +155,7 @@ export default function GarbageMap({ userLoc, externalRouteDest }: GarbageMapPro
     }
   }, [externalRouteDest, userLoc]);
 
-  const onViewportChange = useCallback((evt: any) => {
+  useEffect(() => {
     const fetchReports = async () => {
       try {
         const { data, error } = await supabase.from('reports').select('*');
