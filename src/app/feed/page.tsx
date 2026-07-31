@@ -12,6 +12,7 @@ import { cn, compressImageBase64 } from "@/lib/utils";
 import { enqueueOfflineTask } from "@/lib/offlineSync";
 import { Geolocation } from "@capacitor/geolocation";
 import { getFastLocation } from "@/lib/location";
+import { getFastLocation } from "@/lib/location";
 
 // Haversine formula to calculate distance between two coordinates in meters
 function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -114,6 +115,7 @@ export default function FeedPage() {
   const [organiseVolunteers, setOrganiseVolunteers] = useState("15");
   const [shareData, setShareData] = useState<any>(null);
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false);
+  const [errorPopup, setErrorPopup] = useState<{ title: string; message: string } | null>(null);
   const [errorPopup, setErrorPopup] = useState<{ title: string; message: string } | null>(null);
   const posterRef = useRef<HTMLDivElement>(null);
 
@@ -1065,6 +1067,37 @@ export default function FeedPage() {
         </div>
       )}
 
+      <AnimatePresence>
+        {errorPopup && (
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setErrorPopup(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-sm glass-panel p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center text-center"
+            >
+              <div className="w-16 h-16 rounded-full bg-[#ff4d6d]/20 flex items-center justify-center mb-4 border border-[#ff4d6d]/30">
+                <AlertTriangle className="w-8 h-8 text-[#ff4d6d]" />
+              </div>
+              <h2 className="text-xl font-black text-white mb-2">{errorPopup.title}</h2>
+              <p className="text-zinc-400 font-medium mb-6 text-sm">{errorPopup.message}</p>
+              <button
+                onClick={() => setErrorPopup(null)}
+                className="w-full py-3.5 bg-white/10 hover:bg-white/15 text-white font-black rounded-xl transition-colors"
+              >
+                Got it
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
