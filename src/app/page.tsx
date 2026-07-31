@@ -57,6 +57,7 @@ export default function Home() {
   const [dailyMissions, setDailyMissions] = useState<Mission[]>([]);
   const [claims, setClaims] = useState<Record<string, boolean>>({});
   const [completions, setCompletions] = useState<Record<string, boolean>>({});
+  const [missionRouteDest, setMissionRouteDest] = useState<{lat: number, lng: number} | null>(null);
 
   const checkBounds = (lat: number, lng: number) => {
     // strict allowedBounds: [12.865, 77.550] to [12.945, 77.625]
@@ -181,7 +182,9 @@ export default function Home() {
 
   const openNavigation = () => {
     if (closestMission) {
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${closestMission.lat},${closestMission.lng}`, '_blank');
+      setMissionRouteDest({ lat: closestMission.lat, lng: closestMission.lng });
+      setIsMissionDismissed(true);
+      sessionStorage.setItem('namma_mission_dismissed', 'true');
     }
   };
 
@@ -273,7 +276,7 @@ export default function Home() {
         transition={{ delay: 0.2 }}
         className="w-full flex-1 relative z-0 rounded-2xl overflow-hidden shadow-[0_15px_50px_-12px_rgba(0,0,0,1)] ring-1 ring-black/5"
       >
-        <GarbageMap userLoc={userLoc} />
+        <GarbageMap userLoc={userLoc} externalRouteDest={missionRouteDest} />
 
         {/* Nearby Mission Overlay */}
         <AnimatePresence>

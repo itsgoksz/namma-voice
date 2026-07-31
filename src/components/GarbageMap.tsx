@@ -62,9 +62,10 @@ let cachedHotspots: Hotspot[] | null = null;
 
 interface GarbageMapProps {
   userLoc?: { lat: number; lng: number } | null;
+  externalRouteDest?: { lat: number; lng: number } | null;
 }
 
-export default function GarbageMap({ userLoc }: GarbageMapProps) {
+export default function GarbageMap({ userLoc, externalRouteDest }: GarbageMapProps) {
   const mapRef = useRef<MapRef>(null);
   
   const [viewState, setViewState] = useState({
@@ -117,6 +118,44 @@ export default function GarbageMap({ userLoc }: GarbageMapProps) {
   };
 
   useEffect(() => {
+    if (externalRouteDest && userLoc) {
+      const fetchExternalRoute = async () => {
+        setIsRouting(true);
+        try {
+          const start = { lng: userLoc.lng, lat: userLoc.lat };
+          const end = { lng: externalRouteDest.lng, lat: externalRouteDest.lat };
+          const response = await fetch(
+            `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`
+          );
+          const data = await response.json();
+          if (data.routes?.length > 0) {
+            const coords = data.routes[0].geometry.coordinates;
+            setActiveRoute(coords);
+            setSelectedSpot(null);
+            
+            const routeBounds = coords.reduce((acc: [[number, number], [number, number]], coord: [number, number]) => {
+              return [
+                [Math.min(acc[0][0], coord[0]), Math.min(acc[0][1], coord[1])],
+                [Math.max(acc[1][0], coord[0]), Math.max(acc[1][1], coord[1])]
+              ] as [[number, number], [number, number]];
+            }, [[Infinity, Infinity], [-Infinity, -Infinity]]);
+            
+            if (mapRef.current) {
+              mapRef.current.fitBounds(routeBounds, { padding: 60, duration: 1500 });
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch route:", error);
+          alert("Failed to fetch routing data. Please try again.");
+        } finally {
+          setIsRouting(false);
+        }
+      };
+      fetchExternalRoute();
+    }
+  }, [externalRouteDest, userLoc]);
+
+  const onViewportChange = useCallback((evt: any) => {
     const fetchReports = async () => {
       try {
         const { data, error } = await supabase.from('reports').select('*');
