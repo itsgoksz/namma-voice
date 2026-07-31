@@ -11,6 +11,7 @@ import { Camera as CameraIcon, MapPin, Clock, Megaphone, Info, AlertTriangle, Fl
 import { cn, compressImageBase64 } from "@/lib/utils";
 import { enqueueOfflineTask } from "@/lib/offlineSync";
 import { Geolocation } from "@capacitor/geolocation";
+import { getFastLocation } from "@/lib/location";
 
 // Haversine formula to calculate distance between two coordinates in meters
 function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -113,6 +114,7 @@ export default function FeedPage() {
   const [organiseVolunteers, setOrganiseVolunteers] = useState("15");
   const [shareData, setShareData] = useState<any>(null);
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false);
+  const [errorPopup, setErrorPopup] = useState<{ title: string; message: string } | null>(null);
   const posterRef = useRef<HTMLDivElement>(null);
 
   // XP Split States
@@ -318,15 +320,21 @@ export default function FeedPage() {
 
       try {
         await Geolocation.requestPermissions();
-        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-        const dist = getDistanceInMeters(pos.coords.latitude, pos.coords.longitude, post.lat, post.lng);
+        const pos = await getFastLocation();
+        const dist = getDistanceInMeters(pos.lat, pos.lng, post.lat, post.lng);
         
         if (dist > 50) {
-          alert(`You are too far from the garbage location! (${Math.round(dist)}m away)\n\nYou must be physically present at the exact location to clean it up.`);
+          setErrorPopup({
+            title: "Too Far Away",
+            message: `You are ${Math.round(dist)}m away from the garbage location. You must be physically present at the exact location to clean it up.`
+          });
           return;
         }
       } catch (err) {
-        alert("Failed to get your location. Please enable GPS to clean up this spot.");
+        setErrorPopup({
+          title: "Location Failed",
+          message: "Failed to get your location. Please enable GPS to clean up this spot."
+        });
         return;
       }
 
