@@ -319,7 +319,7 @@ export default function FeedPage() {
       if (!post) return;
 
       try {
-        await Geolocation.requestPermissions();
+        try { await Geolocation.requestPermissions(); } catch (e) {}
         const pos = await getFastLocation();
         const dist = getDistanceInMeters(pos.lat, pos.lng, post.lat, post.lng);
         
