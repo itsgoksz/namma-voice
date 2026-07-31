@@ -58,6 +58,7 @@ export default function Home() {
   const [claims, setClaims] = useState<Record<string, boolean>>({});
   const [completions, setCompletions] = useState<Record<string, boolean>>({});
   const [missionRouteDest, setMissionRouteDest] = useState<{lat: number, lng: number} | null>(null);
+  const [isMapRouting, setIsMapRouting] = useState(false);
 
   const checkBounds = (lat: number, lng: number) => {
     // strict allowedBounds: [12.865, 77.550] to [12.945, 77.625]
@@ -280,7 +281,7 @@ export default function Home() {
         transition={{ delay: 0.2 }}
         className="w-full flex-1 relative z-0 rounded-2xl overflow-hidden shadow-[0_15px_50px_-12px_rgba(0,0,0,1)] ring-1 ring-black/5"
       >
-        <GarbageMap userLoc={userLoc} externalRouteDest={missionRouteDest} />
+        <GarbageMap userLoc={userLoc} externalRouteDest={missionRouteDest} onActiveRouteChange={setIsMapRouting} />
 
         {/* Nearby Mission Overlay */}
         <AnimatePresence>
@@ -325,7 +326,7 @@ export default function Home() {
               </div>
             </motion.div>
           )}
-          {closestMission && isMissionDismissed && (
+          {closestMission && isMissionDismissed && !isMapRouting && (
             <motion.div 
               key="mission-fab"
               initial={{ opacity: 0, scale: 0 }}

@@ -13,6 +13,7 @@ import useSupercluster from "use-supercluster";
 import { getImageUrl } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { Navigation, X, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Initial center
 const center: [number, number] = [12.9000, 77.5850];
@@ -63,9 +64,10 @@ let cachedHotspots: Hotspot[] | null = null;
 interface GarbageMapProps {
   userLoc?: { lat: number; lng: number; heading?: number | null } | null;
   externalRouteDest?: { lat: number; lng: number } | null;
+  onActiveRouteChange?: (isActive: boolean) => void;
 }
 
-export default function GarbageMap({ userLoc, externalRouteDest }: GarbageMapProps) {
+export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteChange }: GarbageMapProps) {
   const mapRef = useRef<MapRef>(null);
   
   const [viewState, setViewState] = useState({
@@ -220,6 +222,12 @@ export default function GarbageMap({ userLoc, externalRouteDest }: GarbageMapPro
       });
     }
   }, [userLoc, isLiveNavigation]);
+
+  useEffect(() => {
+    if (onActiveRouteChange) {
+      onActiveRouteChange(!!activeRoute);
+    }
+  }, [activeRoute, onActiveRouteChange]);
 
   // Clustering logic
   const points = hotspots.map(spot => ({
@@ -470,26 +478,33 @@ export default function GarbageMap({ userLoc, externalRouteDest }: GarbageMapPro
       </Map>
 
       {/* Overlays */}
-      {guardian && (
-        <div className="absolute bottom-4 left-4 z-[999] pointer-events-auto">
-          <div className="glass-panel p-3.5 rounded-2xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
-            <h4 className="text-white font-black text-sm mb-1 tracking-wide flex items-center">
-              South Bengaluru 
-            </h4>
-            <p className="text-[#ff4d6d] text-xs font-bold mb-2">
-              {hotspots.length} reports live
-            </p>
-            <div className="bg-black/50 rounded-lg p-2 border border-white/5">
-              <p className="text-[#d4af37] text-[10px] font-black uppercase tracking-widest mb-0.5">Sector Guardian</p>
-              <p className="text-white font-black text-xs truncate max-w-[140px]">@{guardian}</p>
+      <AnimatePresence>
+        {guardian && !activeRoute && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="absolute bottom-4 left-4 z-[999] pointer-events-auto"
+          >
+            <div className="glass-panel p-3.5 rounded-2xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
+              <h4 className="text-white font-black text-sm mb-1 tracking-wide flex items-center">
+                South Bengaluru 
+              </h4>
+              <p className="text-[#ff4d6d] text-xs font-bold mb-2">
+                {hotspots.length} reports live
+              </p>
+              <div className="bg-black/50 rounded-lg p-2 border border-white/5">
+                <p className="text-[#d4af37] text-[10px] font-black uppercase tracking-widest mb-0.5">Sector Guardian</p>
+                <p className="text-white font-black text-xs truncate max-w-[140px]">@{guardian}</p>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {/* Navigation Overlays */}
       {activeRoute && (
-        <div className="absolute bottom-4 right-20 z-[999] pointer-events-auto flex flex-col space-y-3 items-end">
+        <div className="absolute bottom-4 right-4 z-[999] pointer-events-auto flex flex-col space-y-3 items-end">
           {!isLiveNavigation ? (
             <button
               onClick={() => setIsLiveNavigation(true)}
