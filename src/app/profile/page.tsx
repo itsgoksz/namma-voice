@@ -174,15 +174,18 @@ export default function ProfilePage() {
         <div className="relative flex items-center justify-center py-4 overflow-hidden w-full max-w-sm mx-auto">
           <div className="flex items-center space-x-2 z-10 w-full px-4 relative">
 
-            {/* Previous Badge */}
-            <div className="flex-1 flex justify-center">
+            {/* Previous Badges (Scrollable) */}
+            <div className="flex-1 flex overflow-x-auto items-center space-x-2 space-x-reverse flex-row-reverse pr-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              <style dangerouslySetInnerHTML={{ __html: `::-webkit-scrollbar { display: none; }` }} />
               {currentBadgeIndex > 0 ? (
-                <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#10b981]/5 border border-[#10b981]/10 opacity-60 scale-90 w-full max-w-[80px]">
-                  <span className="text-2xl mb-1 filter drop-shadow-md">{badges[currentBadgeIndex - 1].icon}</span>
-                  <p className="text-[10px] font-bold text-center text-white/70 truncate w-full">{badges[currentBadgeIndex - 1].name}</p>
-                </div>
+                badges.slice(0, currentBadgeIndex).reverse().map((badge, idx) => (
+                  <div key={idx} className="flex-none flex flex-col items-center justify-center p-3 rounded-2xl bg-[#10b981]/5 border border-[#10b981]/10 opacity-60 scale-90 w-[80px]">
+                    <span className="text-2xl mb-1 filter drop-shadow-md">{badge.icon}</span>
+                    <p className="text-[10px] font-bold text-center text-white/70 truncate w-full">{badge.name}</p>
+                  </div>
+                ))
               ) : (
-                <div className="w-full max-w-[80px]" /> /* Empty placeholder to keep center aligned */
+                <div className="w-[80px] shrink-0" />
               )}
             </div>
 
