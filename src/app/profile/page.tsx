@@ -179,7 +179,11 @@ export default function ProfilePage() {
               <style dangerouslySetInnerHTML={{ __html: `::-webkit-scrollbar { display: none; }` }} />
               {currentBadgeIndex > 0 ? (
                 badges.slice(0, currentBadgeIndex).reverse().map((badge, idx) => (
-                  <div key={idx} className="flex-none flex flex-col items-center justify-center p-3 rounded-2xl bg-[#10b981]/5 border border-[#10b981]/10 opacity-60 scale-90 w-[80px]">
+                  <div 
+                    key={idx} 
+                    onClick={() => setBadgeMessage({ title: `Unlocked: ${badge.name}`, text: badge.req })}
+                    className="flex-none flex flex-col items-center justify-center p-3 rounded-2xl bg-[#10b981]/5 border border-[#10b981]/10 opacity-60 scale-90 w-[80px] cursor-pointer hover:opacity-80 transition-opacity"
+                  >
                     <span className="text-2xl mb-1 filter drop-shadow-md">{badge.icon}</span>
                     <p className="text-[10px] font-bold text-center text-white/70 truncate w-full">{badge.name}</p>
                   </div>
@@ -192,7 +196,10 @@ export default function ProfilePage() {
             {/* Current Badge */}
             <div className="flex-1 flex justify-center relative">
               {currentBadgeIndex >= 0 ? (
-                <div className="flex flex-col items-center justify-center p-4 rounded-3xl bg-[#10b981]/20 border border-[#10b981]/40 shadow-[0_0_30px_rgba(16,185,129,0.3)] scale-110 z-20 w-full max-w-[100px]">
+                <div 
+                  onClick={() => setBadgeMessage({ title: `Current: ${badges[currentBadgeIndex].name}`, text: badges[currentBadgeIndex].req })}
+                  className="flex flex-col items-center justify-center p-4 rounded-3xl bg-[#10b981]/20 border border-[#10b981]/40 shadow-[0_0_30px_rgba(16,185,129,0.3)] scale-110 z-20 w-full max-w-[100px] cursor-pointer hover:bg-[#10b981]/30 transition-colors"
+                >
                   <div className="absolute inset-0 bg-[#10b981] opacity-20 blur-xl rounded-full" />
                   <span className="text-4xl mb-2 filter drop-shadow-lg relative z-10">{badges[currentBadgeIndex].icon}</span>
                   <p className="text-xs font-black text-center text-white relative z-10 truncate w-full">{badges[currentBadgeIndex].name}</p>
