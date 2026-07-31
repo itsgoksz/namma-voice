@@ -42,7 +42,7 @@ export default function Home() {
   const [closestMission, setClosestMission] = useState<{ id: number, lat: number, lng: number, distance: number, severity?: any } | null>(cachedClosestMission);
   
   // Try to instantly grab location from cache on mount
-  const [userLoc, setUserLoc] = useState<{lat: number, lng: number} | null>(() => {
+  const [userLoc, setUserLoc] = useState<{lat: number, lng: number, heading?: number | null} | null>(() => {
     if (typeof window !== 'undefined') {
       const lat = localStorage.getItem('namma_lat');
       const lng = localStorage.getItem('namma_lng');
@@ -110,7 +110,11 @@ export default function Home() {
           maximumAge: 0
         }, (pos, err) => {
           if (pos) {
-            setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            setUserLoc({ 
+              lat: pos.coords.latitude, 
+              lng: pos.coords.longitude,
+              heading: pos.coords.heading 
+            });
             checkBounds(pos.coords.latitude, pos.coords.longitude);
           }
         });

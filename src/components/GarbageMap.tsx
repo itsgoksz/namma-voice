@@ -61,7 +61,7 @@ interface Hotspot {
 let cachedHotspots: Hotspot[] | null = null;
 
 interface GarbageMapProps {
-  userLoc?: { lat: number; lng: number } | null;
+  userLoc?: { lat: number; lng: number; heading?: number | null } | null;
   externalRouteDest?: { lat: number; lng: number } | null;
 }
 
@@ -80,6 +80,7 @@ export default function GarbageMap({ userLoc, externalRouteDest }: GarbageMapPro
   const [hasCentered, setHasCentered] = useState(false);
   const [activeRoute, setActiveRoute] = useState<[number, number][] | null>(null);
   const [isRouting, setIsRouting] = useState(false);
+  const [isLiveNavigation, setIsLiveNavigation] = useState(false);
 
   const handleNavigate = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -196,7 +197,7 @@ export default function GarbageMap({ userLoc, externalRouteDest }: GarbageMapPro
 
   // Center on user exactly once when location is available
   useEffect(() => {
-    if (userLoc && !hasCentered && mapRef.current) {
+    if (userLoc && !hasCentered && mapRef.current && !isLiveNavigation) {
       mapRef.current.flyTo({
         center: [userLoc.lng, userLoc.lat],
         duration: 1500,
@@ -204,7 +205,21 @@ export default function GarbageMap({ userLoc, externalRouteDest }: GarbageMapPro
       });
       setHasCentered(true);
     }
-  }, [userLoc, hasCentered]);
+  }, [userLoc, hasCentered, isLiveNavigation]);
+
+  // Live Navigation tracking
+  useEffect(() => {
+    if (isLiveNavigation && userLoc && mapRef.current) {
+      mapRef.current.easeTo({
+        center: [userLoc.lng, userLoc.lat],
+        bearing: userLoc.heading || mapRef.current.getBearing(),
+        pitch: 60,
+        zoom: 18,
+        duration: 1000,
+        easing: (t) => t
+      });
+    }
+  }, [userLoc, isLiveNavigation]);
 
   // Clustering logic
   const points = hotspots.map(spot => ({
@@ -454,15 +469,57 @@ export default function GarbageMap({ userLoc, externalRouteDest }: GarbageMapPro
         )}
       </Map>
 
-      <div className="absolute bottom-4 left-3 z-[400] glass-panel p-2.5 bg-[rgba(13,27,10,0.95)] shadow-[0_0_10px_rgba(0,0,0,0.8)] border border-[#10b981]/20 rounded-xl">
-        <h3 className="text-white font-bold text-sm leading-tight">South Bengaluru</h3>
-        <p className="text-[#ff4d6d] font-black text-[10px] mb-1.5">{hotspots.length} reports live</p>
-        
-        <div className="mt-2 flex flex-col">
-          <p className="text-[9px] text-[#d4af37] font-bold uppercase tracking-widest leading-none">Sector Guardian</p>
-          <p className="text-white font-black text-xs leading-none mt-1">@{guardian}</p>
+      {/* Overlays */}
+      {guardian && (
+        <div className="absolute bottom-6 left-4 z-[999] pointer-events-auto">
+          <div className="glass-panel p-3.5 rounded-2xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
+            <h4 className="text-white font-black text-sm mb-1 tracking-wide flex items-center">
+              South Bengaluru 
+            </h4>
+            <p className="text-[#ff4d6d] text-xs font-bold mb-2">
+              {hotspots.length} reports live
+            </p>
+            <div className="bg-black/50 rounded-lg p-2 border border-white/5">
+              <p className="text-[#d4af37] text-[10px] font-black uppercase tracking-widest mb-0.5">Sector Guardian</p>
+              <p className="text-white font-black text-xs truncate max-w-[140px]">@{guardian}</p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+      
+      {/* Navigation Overlays */}
+      {activeRoute && (
+        <div className="absolute bottom-6 right-4 z-[999] pointer-events-auto flex flex-col space-y-3 items-end">
+          {!isLiveNavigation ? (
+            <button
+              onClick={() => setIsLiveNavigation(true)}
+              className="bg-[#10b981] text-white font-black py-3 px-6 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.5)] active:scale-95 transition-transform flex items-center space-x-2 border border-[#10b981]/20"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Start</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setIsLiveNavigation(false);
+                setActiveRoute(null);
+                if (mapRef.current) {
+                  mapRef.current.easeTo({ pitch: 0, bearing: 0, zoom: 15 });
+                }
+              }}
+              className="bg-[#ff4d6d] text-white font-black py-3 px-6 rounded-full shadow-[0_0_20px_rgba(255,77,109,0.5)] active:scale-95 transition-transform flex items-center space-x-2 border border-[#ff4d6d]/20"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <span>Exit</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Border Overlay perfectly overlaying the map */}
       <div className="absolute inset-0 z-[999] pointer-events-none rounded-2xl border border-white/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]" />
