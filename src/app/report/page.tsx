@@ -45,6 +45,7 @@ export default function ReportPage() {
         const permissions = await Camera.requestPermissions({ permissions: ['camera'] });
         if (permissions.camera === 'denied' || permissions.camera === 'prompt-with-rationale') {
           console.warn("Camera permission denied");
+          setErrorMsg("Camera permission is required to capture photos. Please enable it in your device settings.");
           return;
         }
       } catch (e) {}
@@ -122,12 +123,6 @@ export default function ReportPage() {
       try {
         const { error } = await supabase.from('reports').insert([payload]);
         if (error) throw error;
-        
-        // Fetch current user and increment reports_count
-        const { data: user } = await supabase.from('users').select('reports_count').eq('name', username).single();
-        if (user) {
-          await supabase.from('users').update({ reports_count: (user.reports_count || 0) + 1 }).eq('name', username);
-        }
       } catch (e) {
         console.warn("Network failed, enqueuing offline task", e);
         await enqueueOfflineTask('/reports', 'POST', payload);

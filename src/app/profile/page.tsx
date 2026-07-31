@@ -45,8 +45,18 @@ export default function ProfilePage() {
         const username = getCurrentUser();
         const { data, error } = await supabase.from('users').select('*').eq('name', username).single();
         if (!error && data) {
-          setUser(data);
-          setCleanupsCount(data.cleanups_count || 0);
+          setUser(prev => ({ ...data, reports_count: prev.reports_count || data.reports_count }));
+          
+          // Dynamically calculate accurate stats from the reports table to prevent desync
+          const { data: allReports } = await supabase.from('reports').select('id, username, cleanup_squad');
+          
+          if (allReports) {
+             const myReports = allReports.filter((r: any) => r.username && typeof r.username === 'string' && r.username.toLowerCase() === username.toLowerCase());
+             const myCleanups = allReports.filter((r: any) => r.cleanup_squad && Array.isArray(r.cleanup_squad) && r.cleanup_squad.some((s: string) => s && typeof s === 'string' && s.toLowerCase() === username.toLowerCase()));
+             
+             setUser(prev => ({ ...prev, reports_count: myReports.length }));
+             setCleanupsCount(myCleanups.length);
+          }
         }
       } catch (e) {
         console.error("Failed to fetch user", e);

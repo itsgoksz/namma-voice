@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { TrendingUp, TrendingDown, Minus, MapPin, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
+import PublicProfileModal from "@/components/PublicProfileModal";
 
 interface User {
   id: number;
@@ -20,6 +21,7 @@ export default function LeaderboardPage() {
   const [areaStats, setAreaStats] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"users" | "areas">("users");
   const [loading, setLoading] = useState(true);
+  const [selectedPublicUser, setSelectedPublicUser] = useState<string | null>(null);
   const currentUser = getCurrentUser();
 
   useEffect(() => {
@@ -109,7 +111,10 @@ export default function LeaderboardPage() {
           className="flex justify-center items-end h-48 space-x-2 mt-8 mb-4 px-2"
         >
           {/* 2nd Place */}
-          <div className="flex flex-col items-center flex-1">
+          <div 
+            className="flex flex-col items-center flex-1 cursor-pointer hover:scale-105 transition-transform"
+            onClick={() => top3[1] && setSelectedPublicUser(top3[1].name)}
+          >
             <div className="relative mb-2">
               <div className="w-12 h-12 bg-[#10b981]/5 rounded-full flex items-center justify-center text-2xl border border-[#10b981]/20">🥈</div>
             </div>
@@ -121,7 +126,10 @@ export default function LeaderboardPage() {
           </div>
 
           {/* 1st Place */}
-          <div className="flex flex-col items-center flex-1 relative z-10">
+          <div 
+            className="flex flex-col items-center flex-1 relative z-10 cursor-pointer hover:scale-105 transition-transform"
+            onClick={() => top3[0] && setSelectedPublicUser(top3[0].name)}
+          >
             <div className="relative mb-2">
               <div className="absolute -top-4 -right-2 transform rotate-12">
                 <Trophy className="w-6 h-6 text-yellow-400 fill-current drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
@@ -136,7 +144,10 @@ export default function LeaderboardPage() {
           </div>
 
           {/* 3rd Place */}
-          <div className="flex flex-col items-center flex-1">
+          <div 
+            className="flex flex-col items-center flex-1 cursor-pointer hover:scale-105 transition-transform"
+            onClick={() => top3[2] && setSelectedPublicUser(top3[2].name)}
+          >
             <div className="relative mb-2">
               <div className="w-12 h-12 bg-[#10b981]/5 rounded-full flex items-center justify-center text-2xl border border-[#10b981]/20">🥉</div>
             </div>
@@ -154,7 +165,10 @@ export default function LeaderboardPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="glass-panel rounded-3xl overflow-y-auto flex-1 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.4)] pb-4"
+        className={cn(
+          "glass-panel rounded-3xl flex-1 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.4)] pb-4",
+          selectedPublicUser ? "overflow-hidden touch-none" : "overflow-y-auto"
+        )}
       >
         {leaders.map((user, index) => {
           // If we have >= 3 users, skip the first 3 for the list, unless it's just 1 or 2 users total
@@ -165,9 +179,10 @@ export default function LeaderboardPage() {
           
           return (
             <div 
-              key={user.id}
+              key={user.name || `user-${index}`}
+              onClick={() => setSelectedPublicUser(user.name)}
               className={cn(
-                "flex items-center justify-between p-4 border-b border-[#10b981]/20 last:border-0",
+                "flex items-center justify-between p-4 border-b border-[#10b981]/20 last:border-0 cursor-pointer hover:bg-white/5 transition-colors",
                 isCurrentUser && "bg-[#10b981]/5"
               )}
             >
@@ -198,7 +213,10 @@ export default function LeaderboardPage() {
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="glass-panel rounded-3xl overflow-y-auto flex-1 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-4 space-y-4"
+          className={cn(
+            "glass-panel rounded-3xl flex-1 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-4 space-y-4",
+            selectedPublicUser ? "overflow-hidden touch-none" : "overflow-y-auto"
+          )}
         >
           {areaStats.sort((a,b) => b.reports + b.cleanups - (a.reports + a.cleanups)).map((area, index) => (
             <div key={area.area} className="bg-black/40 rounded-2xl p-4 border border-white/5 flex flex-col space-y-3 relative overflow-hidden">
@@ -234,6 +252,16 @@ export default function LeaderboardPage() {
           )}
         </motion.div>
       )}
+
+      <AnimatePresence>
+        {selectedPublicUser && (
+          <PublicProfileModal 
+            key="public-profile-modal"
+            username={selectedPublicUser} 
+            onClose={() => setSelectedPublicUser(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

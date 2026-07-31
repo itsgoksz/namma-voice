@@ -12,6 +12,7 @@ import { cn, compressImageBase64 } from "@/lib/utils";
 import { enqueueOfflineTask } from "@/lib/offlineSync";
 import { Geolocation } from "@capacitor/geolocation";
 import { getFastLocation } from "@/lib/location";
+import PublicProfileModal from '@/components/PublicProfileModal';
 
 // Haversine formula to calculate distance between two coordinates in meters
 function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -123,6 +124,7 @@ export default function FeedPage() {
   const [splitCount, setSplitCount] = useState(2);
   const [splitUsernames, setSplitUsernames] = useState<string[]>(['', '']);
   const [splitError, setSplitError] = useState("");
+  const [selectedPublicUser, setSelectedPublicUser] = useState<string | null>(null);
   const [isSplitting, setIsSplitting] = useState(false);
 
   const getSeverityXP = (severity: string) => {
@@ -216,57 +218,82 @@ export default function FeedPage() {
 
   const handleSupport = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    if (supportedPosts.has(id)) return;
+    
+    const isCurrentlySupported = supportedPosts.has(id);
+    const increment = isCurrentlySupported ? -1 : 1;
+
+    setFeed(prev => prev.map(post => 
+      post.id === id ? { ...post, supports: Math.max(0, (post.supports || 0) + increment) } : post
+    ));
+
     try {
       setSupportedPosts(prev => {
-        const next = new Set(prev).add(id);
+        const next = new Set(prev);
+        if (isCurrentlySupported) {
+          next.delete(id);
+        } else {
+          next.add(id);
+          const today = new Date().toISOString().split('T')[0];
+          const dailyKey = `namma_supported_count_${today}`;
+          const dailyCount = parseInt(localStorage.getItem(dailyKey) || '0') + 1;
+          localStorage.setItem(dailyKey, dailyCount.toString());
+        }
         localStorage.setItem('namma_supported_posts', JSON.stringify(Array.from(next)));
-        
-        const today = new Date().toISOString().split('T')[0];
-        const dailyKey = `namma_supported_count_${today}`;
-        const dailyCount = parseInt(localStorage.getItem(dailyKey) || '0') + 1;
-        localStorage.setItem(dailyKey, dailyCount.toString());
-        
         return next;
       });
+
       const { data: post } = await supabase.from('reports').select('supports').eq('id', id).single();
       if (post) {
-        await supabase.from('reports').update({ supports: (post.supports || 0) + 1 }).eq('id', id);
+        await supabase.from('reports').update({ supports: Math.max(0, (post.supports || 0) + increment) }).eq('id', id);
       }
-      const { data } = await supabase.from('reports').select('*').order('timestamp', { ascending: false });
-      if (data) setFeed(data);
     } catch (e) {
-      console.error("Failed to support", e);
+      console.error("Failed to toggle support", e);
       setSupportedPosts(prev => {
         const next = new Set(prev);
-        next.delete(id);
+        if (isCurrentlySupported) next.add(id);
+        else next.delete(id);
         return next;
       });
+      setFeed(prev => prev.map(post => 
+        post.id === id ? { ...post, supports: Math.max(0, (post.supports || 0) - increment) } : post
+      ));
     }
   };
 
   const handleVolunteer = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    if (volunteeredPosts.has(id)) return;
+    
+    const isCurrentlyVolunteered = volunteeredPosts.has(id);
+    const increment = isCurrentlyVolunteered ? -1 : 1;
+
+    setFeed(prev => prev.map(post => 
+      post.id === id ? { ...post, volunteers: Math.max(0, (post.volunteers || 0) + increment) } : post
+    ));
+
     try {
       setVolunteeredPosts(prev => {
-        const next = new Set(prev).add(id);
+        const next = new Set(prev);
+        if (isCurrentlyVolunteered) next.delete(id);
+        else next.add(id);
         localStorage.setItem('namma_volunteered_posts', JSON.stringify(Array.from(next)));
         return next;
       });
+      
       const { data: post } = await supabase.from('reports').select('volunteers').eq('id', id).single();
       if (post) {
-        await supabase.from('reports').update({ volunteers: (post.volunteers || 0) + 1 }).eq('id', id);
+        await supabase.from('reports').update({ volunteers: Math.max(0, (post.volunteers || 0) + increment) }).eq('id', id);
       }
-      const { data } = await supabase.from('reports').select('*').order('timestamp', { ascending: false });
-      if (data) setFeed(data);
     } catch (e) {
-      console.error("Failed to volunteer", e);
+      console.error("Failed to toggle volunteer", e);
       setVolunteeredPosts(prev => {
         const next = new Set(prev);
-        next.delete(id);
+        if (isCurrentlyVolunteered) next.add(id);
+        else next.delete(id);
         return next;
       });
+      setFeed(prev => prev.map(post => 
+        post.id === id ? { ...post, volunteers: Math.max(0, (post.volunteers || 0) - increment) } : post
+      ));
     }
   };
 
@@ -455,7 +482,10 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="p-4 space-y-6 h-full overflow-y-auto flex flex-col pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
+    <div className={cn(
+      "p-4 space-y-6 h-full flex flex-col pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10",
+      (activePost || selectedPublicUser || splitModalData) ? "overflow-hidden touch-none" : "overflow-y-auto"
+    )}>
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -490,15 +520,21 @@ export default function FeedPage() {
               {/* Header */}
               <div className="p-4 flex flex-wrap gap-3 justify-between items-center">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-[#10b981]/5 rounded-full flex items-center justify-center text-xl border border-[#10b981]/20">
-                    👤
-                  </div>
-                  <div>
-                    <p className="text-white font-bold text-sm">{post.username}</p>
-                    <div className="flex items-center space-x-1 text-xs text-white/70">
-                      <Clock className="w-3 h-3" />
-                      <span>{timeAgo(post.timestamp)}</span>
+                  <div 
+                    className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedPublicUser(post.username);
+                    }}
+                  >
+                    <div className="w-10 h-10 bg-[#10b981]/5 rounded-full flex items-center justify-center text-xl border border-[#10b981]/20">
+                      👤
                     </div>
+                    <p className="text-white font-bold text-sm hover:underline">{post.username}</p>
+                  </div>
+                  <div className="flex items-center space-x-1 text-xs text-white/70">
+                    <Clock className="w-3 h-3" />
+                    <span>{timeAgo(post.timestamp)}</span>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -554,14 +590,18 @@ export default function FeedPage() {
               {/* Footer */}
               <div className="p-4 flex flex-col space-y-3">
                 <p className="text-sm text-zinc-400">
-                  <span className="text-white font-bold mr-2">{post.username}</span>
+                  <span 
+                    className="text-white font-bold mr-2 cursor-pointer hover:underline"
+                    onClick={() => setSelectedPublicUser(post.username)}
+                  >
+                    {post.username}
+                  </span>
                   Raised awareness for a cleanup!
                 </p>
                 <div className="flex items-center justify-between space-x-2">
                   <div className="flex space-x-2">
                     <button 
                       onClick={(e) => handleSupport(e, post.id)}
-                      disabled={supportedPosts.has(post.id)}
                       className={cn("px-3 py-2 rounded-full transition-all group flex items-center space-x-1.5", 
                         supportedPosts.has(post.id) 
                           ? "bg-[#ff7f50]/30 shadow-[0_0_20px_rgba(255,127,80,0.6)] border border-[#ff7f50]" 
@@ -645,8 +685,11 @@ export default function FeedPage() {
             >
               {/* Header */}
               <div className="p-4 flex justify-between items-center">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-[#10b981]/5 rounded-full flex items-center justify-center text-xl border border-[#10b981]/20">👤</div>
+                <div 
+                  className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => setSelectedPublicUser(activePost.username)}
+                >
+                  <div className="w-10 h-10 bg-[#10b981]/10 rounded-full flex items-center justify-center text-xl border border-[#10b981]/30">👤</div>
                   <div>
                     <p className="text-white font-bold text-sm">{activePost.username}</p>
                     <div className="flex items-center space-x-1 text-xs text-white/70">
@@ -1094,6 +1137,15 @@ export default function FeedPage() {
               </button>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {selectedPublicUser && (
+          <PublicProfileModal 
+            key="public-profile-modal"
+            username={selectedPublicUser} 
+            onClose={() => setSelectedPublicUser(null)} 
+          />
         )}
       </AnimatePresence>
     </div>

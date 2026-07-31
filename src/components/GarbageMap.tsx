@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import * as maplibregl from "maplibre-gl";
 import Map, { Marker, Popup, MapRef, Source, Layer } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -12,7 +12,7 @@ if (typeof window !== 'undefined') {
 import useSupercluster from "use-supercluster";
 import { getImageUrl } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
-import { Navigation, X, Loader2 } from "lucide-react";
+import { Navigation, X, Loader2, LocateFixed } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Initial center
@@ -71,10 +71,11 @@ function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: num
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-function getClosestSegmentIndex(point: [number, number], route: [number, number][]) {
-  if (!route || route.length < 2) return 0;
+function getClosestSegmentInfo(point: [number, number], route: [number, number][]) {
+  if (!route || route.length < 2) return { index: 0, proj: point };
   let minDist = Infinity;
   let minIndex = 0;
+  let bestProj = point;
   
   for (let i = 0; i < route.length - 1; i++) {
     const v = route[i]; // [lng, lat]
@@ -93,9 +94,55 @@ function getClosestSegmentIndex(point: [number, number], route: [number, number]
     if (dist < minDist) {
       minDist = dist;
       minIndex = i;
+      bestProj = proj;
     }
   }
-  return minIndex;
+  return { index: minIndex, proj: bestProj };
+}
+
+function AnimatedMarker({ targetLng, targetLat, isLiveNavigation, children }: { targetLng: number, targetLat: number, isLiveNavigation: boolean, children: React.ReactNode }) {
+  const [lng, setLng] = useState(targetLng);
+  const [lat, setLat] = useState(targetLat);
+  const animationRef = useRef<number>();
+  
+  useEffect(() => {
+    if (!isLiveNavigation) {
+      setLng(targetLng);
+      setLat(targetLat);
+      return;
+    }
+    
+    let start = performance.now();
+    const startLng = lng;
+    const startLat = lat;
+    const duration = 1000;
+    
+    const animate = (time: number) => {
+      const elapsed = time - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3); // ease-out
+      
+      setLng(startLng + (targetLng - startLng) * ease);
+      setLat(startLat + (targetLat - startLat) * ease);
+      
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
+    };
+    
+    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    animationRef.current = requestAnimationFrame(animate);
+    
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [targetLng, targetLat, isLiveNavigation]);
+
+  return (
+    <Marker longitude={lng} latitude={lat} anchor="bottom">
+      {children}
+    </Marker>
+  );
 }
 
 interface GarbageMapProps {
@@ -107,11 +154,8 @@ interface GarbageMapProps {
 export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteChange }: GarbageMapProps) {
   const mapRef = useRef<MapRef>(null);
   
-  const [viewState, setViewState] = useState({
-    latitude: userLoc?.lat || center[0],
-    longitude: userLoc?.lng || center[1],
-    zoom: 15
-  });
+  const [zoom, setZoom] = useState(15);
+  const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
 
   const [hotspots, setHotspots] = useState<Hotspot[]>(cachedHotspots || []);
   const [guardian, setGuardian] = useState<string>("Loading...");
@@ -140,7 +184,6 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
     e.stopPropagation();
     if (!selectedSpot) return;
     setCurrentDestination({ lat: selectedSpot.pos[0], lng: selectedSpot.pos[1] });
-    setSelectedSpot(null); // Hide popup to view route
   };
 
   // Fetch route when currentDestination changes, or if fullRoute is cleared (off-route)
@@ -175,10 +218,14 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
             if (mapRef.current) {
               mapRef.current.fitBounds(routeBounds, { padding: 60, duration: 1500 });
             }
+          } else {
+            setCurrentDestination(null);
+            alert("No route found to this location.");
           }
         } catch (error) {
           console.error("Failed to fetch route:", error);
           alert("Failed to fetch routing data. Please try again.");
+          setCurrentDestination(null);
         } finally {
           setIsRouting(false);
         }
@@ -192,15 +239,11 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
     if (!fullRoute || !userLoc) return;
     
     const userPoint: [number, number] = [userLoc.lng, userLoc.lat];
-    const closestIdx = getClosestSegmentIndex(userPoint, fullRoute);
+    const { index: closestIdx, proj: snappedPoint } = getClosestSegmentInfo(userPoint, fullRoute);
     
-    const closestSegmentV = fullRoute[closestIdx];
-    const nextV = fullRoute[Math.min(closestIdx + 1, fullRoute.length - 1)];
-    const dist1 = getDistanceInMeters(userPoint[1], userPoint[0], closestSegmentV[1], closestSegmentV[0]);
-    const dist2 = getDistanceInMeters(userPoint[1], userPoint[0], nextV[1], nextV[0]);
-    const offRouteDist = Math.min(dist1, dist2);
+    const offRouteDist = getDistanceInMeters(userPoint[1], userPoint[0], snappedPoint[1], snappedPoint[0]);
 
-    if (offRouteDist > 50 && closestIdx < fullRoute.length - 2) {
+    if (offRouteDist > 50 && closestIdx > 2 && closestIdx < fullRoute.length - 2) {
        offRouteCounter.current += 1;
        if (offRouteCounter.current >= 3) {
          setFullRoute(null);
@@ -209,7 +252,10 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
     } else {
        offRouteCounter.current = 0;
        // Snap user to route and prune history
-       const prunedRoute = [userPoint, ...fullRoute.slice(closestIdx + 1)];
+       let prunedRoute = [snappedPoint, ...fullRoute.slice(closestIdx + 1)];
+       if (prunedRoute.length < 2) {
+         prunedRoute = [snappedPoint, fullRoute[fullRoute.length - 1]];
+       }
        setActiveRoute(prunedRoute);
        
        // Step progression
@@ -313,29 +359,40 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
   }, [activeRoute, onActiveRouteChange]);
 
   // Clustering logic
-  const points = hotspots.map(spot => ({
-    type: "Feature" as const,
-    properties: { cluster: false, hotspot: spot, hotspotId: spot.id },
-    geometry: {
-      type: "Point" as const,
-      coordinates: [spot.pos[1], spot.pos[0]] // GeoJSON expects [lng, lat]
-    }
-  }));
-
-  const bounds = mapRef.current ? mapRef.current.getMap().getBounds().toArray().flat() as [number, number, number, number] : null;
+  const points = useMemo(() => {
+    return hotspots.map(spot => ({
+      type: "Feature" as const,
+      properties: { cluster: false, hotspot: spot, point_count: 1, category: spot.severity },
+      geometry: {
+        type: "Point" as const,
+        coordinates: [spot.pos[1], spot.pos[0]] // GeoJSON expects [lng, lat]
+      }
+    }));
+  }, [hotspots]);
 
   const { clusters, supercluster } = useSupercluster({
     points,
     bounds: bounds || undefined,
-    zoom: viewState.zoom,
+    zoom: zoom,
     options: { radius: 40, maxZoom: 17 }
   });
 
   return (
     <div className="w-full h-full relative z-0 bg-black">
       <Map
-        {...viewState}
-        onMove={evt => setViewState(evt.viewState)}
+        initialViewState={{
+          latitude: userLoc?.lat || center[0],
+          longitude: userLoc?.lng || center[1],
+          zoom: 15
+        }}
+        onMoveEnd={evt => {
+          setZoom(evt.viewState.zoom);
+          setBounds(evt.target.getBounds().toArray().flat() as [number, number, number, number]);
+        }}
+        onLoad={evt => {
+          setZoom(evt.target.getZoom());
+          setBounds(evt.target.getBounds().toArray().flat() as [number, number, number, number]);
+        }}
         ref={mapRef}
         mapStyle={rasterMapStyle as any}
         maxBounds={allowedBounds}
@@ -368,24 +425,26 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                 "line-cap": "round"
               }}
               paint={{
-                "line-color": "#f14f4f",
+                "line-color": (!fullRoute && isRouting) ? "#888888" : "#f14f4f",
                 "line-width": 6,
-                "line-opacity": 1
+                "line-dasharray": (!fullRoute && isRouting) ? [2, 2] : [1],
+                "line-opacity": (!fullRoute && isRouting) ? 0.6 : 1
               }}
             />
           </Source>
         )}
         
         {userLoc && (
-          <Marker
-            longitude={userLoc.lng}
-            latitude={userLoc.lat}
-            anchor="bottom"
+          <AnimatedMarker
+            targetLng={isLiveNavigation && activeRoute ? activeRoute[0][0] : userLoc.lng}
+            targetLat={isLiveNavigation && activeRoute ? activeRoute[0][1] : userLoc.lat}
+            isLiveNavigation={isLiveNavigation}
           >
             <div className="relative flex flex-col items-center justify-center w-12 h-12">
               <div 
                 className="relative w-12 h-12 flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-95"
                 onClick={(e) => {
+                  if (!!activeRoute) return;
                   e.stopPropagation();
                   setShowUserPopup(true);
                   setSelectedSpot(null);
@@ -396,7 +455,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                 </svg>
               </div>
             </div>
-          </Marker>
+          </AnimatedMarker>
         )}
 
         {clusters.map((cluster) => {
@@ -405,6 +464,15 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
 
           if (isCluster) {
             const size = Math.max(50, Math.min(70, pointCount * 3 + 40));
+            
+            const isNavigating = !!activeRoute;
+            let clusterContainsDestination = false;
+            if (isNavigating && selectedSpot) {
+              const leaves = supercluster.getLeaves(cluster.id as number, Infinity);
+              clusterContainsDestination = leaves.some(l => l.properties?.hotspot?.id === selectedSpot.id);
+            }
+            const isDimmed = isNavigating && !clusterContainsDestination;
+
             return (
               <Marker
                 key={`cluster-${cluster.id}`}
@@ -412,6 +480,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                 latitude={latitude}
                 anchor="center"
                 onClick={() => {
+                  if (isLiveNavigation) return;
                   const expansionZoom = Math.min(
                     supercluster.getClusterExpansionZoom(cluster.id as number),
                     22
@@ -423,10 +492,12 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                   });
                 }}
               >
-                <div style={{ width: size, height: size }} className="relative flex items-center justify-center cursor-pointer">
-                  <svg className="absolute inset-0 w-full h-full text-[#990000] opacity-40 animate-pulse" viewBox="0 0 100 100" fill="currentColor">
-                    <polygon points="50 1 95 25 95 75 50 99 5 75 5 25" />
-                  </svg>
+                <div style={{ width: size, height: size }} className={`relative flex items-center justify-center cursor-pointer transition-all duration-500 ${isDimmed ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
+                  {!isDimmed && (
+                    <svg className="absolute inset-0 w-full h-full text-[#990000] opacity-40 animate-pulse" viewBox="0 0 100 100" fill="currentColor">
+                      <polygon points="50 1 95 25 95 75 50 99 5 75 5 25" />
+                    </svg>
+                  )}
                   <svg className="absolute w-[80%] h-[80%] text-[#cc0000] drop-shadow-[0_0_10px_#ff0000]" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="4">
                     <polygon points="50 1 95 25 95 75 50 99 5 75 5 25" />
                   </svg>
@@ -471,6 +542,10 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
             iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
           }
 
+          const isNavigating = !!activeRoute;
+          const isDestination = isNavigating && selectedSpot?.id === spot.id;
+          const isDimmed = isNavigating && !isDestination;
+
           return (
             <Marker
               key={spot.id}
@@ -478,16 +553,17 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
               latitude={latitude}
               anchor="center"
               onClick={e => {
+                if (isNavigating) return;
                 e.originalEvent.stopPropagation();
                 setSelectedSpot(spot);
                 setActiveRoute(null); // Clear previous route
               }}
             >
               <div 
-                className="relative flex items-center justify-center transition-transform hover:scale-110 cursor-pointer" 
+                className={`relative flex items-center justify-center transition-all duration-500 hover:scale-110 cursor-pointer ${isDimmed ? 'opacity-30 pointer-events-none grayscale' : ''}`} 
                 style={{ width: size, height: size, color }}
               >
-                <div className="absolute inset-0 rounded-full opacity-50 animate-ping" style={{ backgroundColor: glowColor, animationDuration: '2.5s' }} />
+                {!isDimmed && <div className="absolute inset-0 rounded-full opacity-50 animate-ping" style={{ backgroundColor: glowColor, animationDuration: '2.5s' }} />}
                 <div 
                   className="absolute inset-1 rounded-full border-[3px] flex items-center justify-center bg-gradient-to-b from-zinc-900 to-black shadow-lg" 
                   style={{ borderColor: glowColor, boxShadow: `0 0 15px ${glowColor}, inset 0 0 10px ${glowColor}` }}
@@ -506,7 +582,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
           );
         })}
 
-        {selectedSpot && (
+        {selectedSpot && !currentDestination && (
           <Popup
             longitude={selectedSpot.pos[1]}
             latitude={selectedSpot.pos[0]}
@@ -647,40 +723,101 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
         )}
       </AnimatePresence>
 
+      {/* Rerouting Overlay */}
+      <AnimatePresence>
+        {activeRoute && !fullRoute && isRouting && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-6 left-1/2 -translate-x-1/2 z-[999] pointer-events-auto"
+          >
+            <div className="glass-panel px-6 py-3 rounded-full border border-[#f14f4f]/30 shadow-[0_15px_40px_rgba(0,0,0,0.6)] flex items-center space-x-3 bg-black/90 backdrop-blur-xl">
+              <Loader2 className="w-5 h-5 text-[#f14f4f] animate-spin" />
+              <p className="text-white font-black text-sm tracking-widest uppercase">Rerouting...</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Navigation Overlays */}
       {activeRoute && (
-        <div className="absolute bottom-4 right-4 z-[999] pointer-events-auto flex flex-col space-y-3 items-end">
-          {!isLiveNavigation ? (
-            <button
-              onClick={() => setIsLiveNavigation(true)}
-              className="bg-[#10b981] text-white font-black py-3 px-6 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.5)] active:scale-95 transition-transform flex items-center space-x-2 border border-[#10b981]/20"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>Start</span>
-            </button>
-          ) : (
-            <button
+        <>
+          <AnimatePresence>
+            {isLiveNavigation && (
+              <motion.button
+                key="recenter-button"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
               onClick={() => {
-                setIsLiveNavigation(false);
-                setActiveRoute(null);
-                setFullRoute(null);
-                setCurrentDestination(null);
-                if (mapRef.current) {
-                  mapRef.current.easeTo({ pitch: 0, bearing: 0, zoom: 15 });
+                if (mapRef.current && userLoc) {
+                  let currentBearing = mapRef.current.getBearing();
+                  let targetBearing = userLoc.heading ?? currentBearing;
+                  mapRef.current.easeTo({ center: [userLoc.lng, userLoc.lat], bearing: targetBearing, pitch: isLiveNavigation ? 60 : 0, zoom: 18, duration: 1000 });
                 }
               }}
-              className="bg-[#ff4d6d] text-white font-black py-3 px-6 rounded-full shadow-[0_0_20px_rgba(255,77,109,0.5)] active:scale-95 transition-transform flex items-center space-x-2 border border-[#ff4d6d]/20"
+              className="absolute bottom-4 left-4 z-[999] pointer-events-auto bg-[#1a1a2e] text-white font-black w-12 h-12 p-0 rounded-full shadow-[0_0_20px_rgba(26,26,46,0.5)] active:scale-90 transition-colors flex items-center justify-center border border-white/20 shrink-0"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              <svg className="w-8 h-8 text-white/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1v4 M9 3l3 2 3-2" />
+                <path d="M12 23v-4 M9 21l3-2 3 2" />
+                <path d="M1 12h4 M3 9l2 3-2 3" />
+                <path d="M23 12h-4 M21 9l-2 3 2 3" />
+                <path className="text-[#adc34b]" d="M12 16.5c-2-2.5-3-4-3-5.5a3 3 0 1 1 6 0c0 1.5-1 3-3 5.5z" fill="currentColor" stroke="none" />
+                <circle className="text-[#1a1a2e]" cx="12" cy="11" r="1.5" fill="currentColor" stroke="none" />
               </svg>
-              <span>Exit</span>
-            </button>
-          )}
-        </div>
+            </motion.button>
+            )}
+          </AnimatePresence>
+
+          <div className="absolute bottom-4 right-4 z-[999] pointer-events-auto h-12 w-32">
+            <AnimatePresence>
+              <motion.button
+                key="exit-button"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1, x: isLiveNavigation ? 0 : -60 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                onClick={() => {
+                  setIsLiveNavigation(false);
+                  setActiveRoute(null);
+                  setFullRoute(null);
+                  setCurrentDestination(null);
+                  if (mapRef.current) {
+                    if (selectedSpot) {
+                      mapRef.current.flyTo({ center: [selectedSpot.pos[1], selectedSpot.pos[0]], zoom: 17, pitch: 0, bearing: 0, duration: 1500 });
+                    } else {
+                      mapRef.current.easeTo({ pitch: 0, bearing: 0, zoom: 15 });
+                    }
+                  }
+                }}
+                className="absolute right-0 top-0 bg-[#ff4d6d] text-white font-black w-12 h-12 p-0 rounded-full shadow-[0_0_20px_rgba(255,77,109,0.5)] active:scale-90 transition-colors flex items-center justify-center border border-[#ff4d6d]/30 shrink-0"
+              >
+                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </motion.button>
+
+              {!isLiveNavigation && (
+                <motion.button
+                  key="start-button"
+                  initial={{ scale: 0.5, opacity: 0, x: -30 }}
+                  animate={{ scale: 1, opacity: 1, x: 0 }}
+                  exit={{ scale: 0.5, opacity: 0, x: -30, rotate: -45 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  onClick={() => setIsLiveNavigation(true)}
+                  className="absolute right-0 top-0 bg-[#10b981] text-white font-black w-12 h-12 p-0 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.5)] active:scale-90 transition-colors flex items-center justify-center border border-[#10b981]/30"
+                >
+                  <svg className="w-8 h-8 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M7 5l13 7-13 7z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                  </svg>
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+        </>
       )}
 
       {/* Border Overlay perfectly overlaying the map */}
