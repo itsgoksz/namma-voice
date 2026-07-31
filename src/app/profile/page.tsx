@@ -43,7 +43,7 @@ export default function ProfilePage() {
     const fetchUser = async () => {
       try {
         const username = getCurrentUser();
-        const { data, error } = await supabase.from('users').select('*').eq('name', username).single();
+        const { data, error } = await supabase.from('users').select('*').ilike('name', username).single();
         if (!error && data) {
           setUser(prev => ({ ...data, reports_count: prev.reports_count || data.reports_count }));
           

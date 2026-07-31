@@ -211,7 +211,7 @@ export default function Home() {
   }
 
   return (
-    <div className="relative h-full overflow-hidden w-full flex flex-col px-4 pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] space-y-4">
+    <div className="relative h-full overflow-hidden w-full flex flex-col px-4 pt-safe-header pb-[calc(env(safe-area-inset-bottom)+5.5rem)] space-y-3">
       <div className="flex justify-between items-start z-10">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="max-w-[calc(100%-150px)]">
           <div className="mb-1">
@@ -223,9 +223,9 @@ export default function Home() {
 
       <motion.div 
         initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-        className="glass-panel p-5 rounded-3xl border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl z-10 w-full shrink-0 shadow-xl"
+        className="glass-panel p-4 rounded-2xl border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-2xl z-10 w-full shrink-0 shadow-xl"
       >
-        <div className="flex justify-between items-center mb-3">
+        <div className="flex justify-between items-center mb-2">
           <h3 className={`${Object.values(claims).filter(Boolean).length === dailyMissions.length && dailyMissions.length > 0 ? 'text-[#10b981]/70' : 'text-[#ff4d6d]/70'} font-black text-xs uppercase tracking-widest flex items-center`}>
             <div className={`w-2 h-2 rounded-full mr-2 ${Object.values(claims).filter(Boolean).length === dailyMissions.length && dailyMissions.length > 0 ? 'bg-[#10b981]' : 'bg-[#ff4d6d] animate-ping'}`} /> 
             Today's Missions
@@ -240,7 +240,7 @@ export default function Home() {
           </div>
         </div>
         
-        <div className="space-y-3">
+        <div className="space-y-2">
           
           {dailyMissions.map((mission, index) => {
             const isCompleted = completions[mission.id];

@@ -87,7 +87,7 @@ export default function PublicProfileModal({ username, onClose }: PublicProfileM
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           transition={{ layout: { duration: 0.3, type: "spring", bounce: 0.2 } }}
-          className="relative w-[92vw] max-w-[350px] max-h-[90vh] overflow-y-auto glass-panel rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center bg-[#050505] hide-scrollbar overscroll-contain"
+          className="relative w-[92vw] max-w-[350px] max-h-[90vh] h-fit overflow-y-auto glass-panel rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center bg-[#050505] hide-scrollbar overscroll-contain"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {/* Close button */}

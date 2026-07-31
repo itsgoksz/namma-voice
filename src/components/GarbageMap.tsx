@@ -100,10 +100,10 @@ function getClosestSegmentInfo(point: [number, number], route: [number, number][
   return { index: minIndex, proj: bestProj };
 }
 
-function AnimatedMarker({ targetLng, targetLat, isLiveNavigation, children }: { targetLng: number, targetLat: number, isLiveNavigation: boolean, children: React.ReactNode }) {
+function AnimatedMarker({ targetLng, targetLat, isLiveNavigation, pitchAlignment, rotationAlignment, children }: { targetLng: number, targetLat: number, isLiveNavigation: boolean, pitchAlignment?: 'map' | 'viewport' | 'auto', rotationAlignment?: 'map' | 'viewport' | 'auto', children: React.ReactNode }) {
   const [lng, setLng] = useState(targetLng);
   const [lat, setLat] = useState(targetLat);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | null>(null);
   
   useEffect(() => {
     if (!isLiveNavigation) {
@@ -139,7 +139,7 @@ function AnimatedMarker({ targetLng, targetLat, isLiveNavigation, children }: { 
   }, [targetLng, targetLat, isLiveNavigation]);
 
   return (
-    <Marker longitude={lng} latitude={lat} anchor="bottom">
+    <Marker longitude={lng} latitude={lat} anchor="bottom" pitchAlignment={pitchAlignment} rotationAlignment={rotationAlignment}>
       {children}
     </Marker>
   );
@@ -439,10 +439,12 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
             targetLng={isLiveNavigation && activeRoute ? activeRoute[0][0] : userLoc.lng}
             targetLat={isLiveNavigation && activeRoute ? activeRoute[0][1] : userLoc.lat}
             isLiveNavigation={isLiveNavigation}
+            pitchAlignment={isLiveNavigation ? "map" : "viewport"}
+            rotationAlignment="viewport"
           >
-            <div className="relative flex flex-col items-center justify-center w-12 h-12">
+            <div className={`relative flex flex-col items-center justify-center ${isLiveNavigation ? 'w-20 h-20' : 'w-12 h-12'}`}>
               <div 
-                className="relative w-12 h-12 flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-95"
+                className={`relative flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-95 ${isLiveNavigation ? 'w-20 h-20' : 'w-12 h-12'}`}
                 onClick={(e) => {
                   if (!!activeRoute) return;
                   e.stopPropagation();
@@ -450,9 +452,15 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                   setSelectedSpot(null);
                 }}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-12 h-12 filter drop-shadow-[0_0_12px_rgba(173,195,75,0.9)]">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2c-4.42 0-8 3.58-8 8 0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" fill="#adc34b" />
-                </svg>
+                {isLiveNavigation ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-20 h-20 filter drop-shadow-[0_10px_20px_rgba(173,195,75,0.7)]">
+                    <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" fill="#adc34b"/>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-12 h-12 filter drop-shadow-[0_0_12px_rgba(173,195,75,0.9)]">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2c-4.42 0-8 3.58-8 8 0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" fill="#adc34b" />
+                  </svg>
+                )}
               </div>
             </div>
           </AnimatedMarker>
@@ -469,7 +477,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
             let clusterContainsDestination = false;
             if (isNavigating && selectedSpot) {
               const leaves = supercluster.getLeaves(cluster.id as number, Infinity);
-              clusterContainsDestination = leaves.some(l => l.properties?.hotspot?.id === selectedSpot.id);
+              clusterContainsDestination = leaves.some((l: any) => l.properties?.hotspot?.id === selectedSpot.id);
             }
             const isDimmed = isNavigating && !clusterContainsDestination;
 
@@ -715,7 +723,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                       : "Continue straight"}
                 </p>
                 <p className="text-[#10b981] font-bold text-sm">
-                  {routeSteps[currentStepIndex].name || "Unnamed road"} • {Math.round(routeSteps[currentStepIndex].distance)}m
+                  {routeSteps[currentStepIndex].name || "Unnamed road"} • {userLoc ? Math.round(getDistanceInMeters(userLoc.lat, userLoc.lng, routeSteps[currentStepIndex].maneuver.location[1], routeSteps[currentStepIndex].maneuver.location[0])) : Math.round(routeSteps[currentStepIndex].distance)}m
                 </p>
               </div>
             </div>
