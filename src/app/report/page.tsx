@@ -122,7 +122,12 @@ export default function ReportPage() {
       try {
         const { error } = await supabase.from('reports').insert([payload]);
         if (error) throw error;
-        // XP is now securely awarded by the Postgres Trigger automatically!
+        
+        // Fetch current user and increment reports_count
+        const { data: user } = await supabase.from('users').select('reports_count').eq('name', username).single();
+        if (user) {
+          await supabase.from('users').update({ reports_count: (user.reports_count || 0) + 1 }).eq('name', username);
+        }
       } catch (e) {
         console.warn("Network failed, enqueuing offline task", e);
         await enqueueOfflineTask('/reports', 'POST', payload);
