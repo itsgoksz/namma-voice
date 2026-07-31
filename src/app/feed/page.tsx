@@ -12,7 +12,6 @@ import { cn, compressImageBase64 } from "@/lib/utils";
 import { enqueueOfflineTask } from "@/lib/offlineSync";
 import { Geolocation } from "@capacitor/geolocation";
 import { getFastLocation } from "@/lib/location";
-import { getFastLocation } from "@/lib/location";
 
 // Haversine formula to calculate distance between two coordinates in meters
 function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -115,7 +114,6 @@ export default function FeedPage() {
   const [organiseVolunteers, setOrganiseVolunteers] = useState("15");
   const [shareData, setShareData] = useState<any>(null);
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false);
-  const [errorPopup, setErrorPopup] = useState<{ title: string; message: string } | null>(null);
   const [errorPopup, setErrorPopup] = useState<{ title: string; message: string } | null>(null);
   const posterRef = useRef<HTMLDivElement>(null);
 
