@@ -61,6 +61,43 @@ interface Hotspot {
 
 let cachedHotspots: Hotspot[] | null = null;
 
+function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3; 
+  const p1 = lat1 * Math.PI/180;
+  const p2 = lat2 * Math.PI/180;
+  const dp = (lat2-lat1) * Math.PI/180;
+  const dl = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function getClosestSegmentIndex(point: [number, number], route: [number, number][]) {
+  if (!route || route.length < 2) return 0;
+  let minDist = Infinity;
+  let minIndex = 0;
+  
+  for (let i = 0; i < route.length - 1; i++) {
+    const v = route[i]; // [lng, lat]
+    const w = route[i+1];
+    
+    // planar distance approximation for small segment distances
+    const l2 = (v[0] - w[0]) ** 2 + (v[1] - w[1]) ** 2;
+    let t = 0;
+    if (l2 !== 0) {
+      t = ((point[0] - v[0]) * (w[0] - v[0]) + (point[1] - v[1]) * (w[1] - v[1])) / l2;
+      t = Math.max(0, Math.min(1, t));
+    }
+    const proj: [number, number] = [v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1])];
+    const dist = (point[0] - proj[0]) ** 2 + (point[1] - proj[1]) ** 2;
+    
+    if (dist < minDist) {
+      minDist = dist;
+      minIndex = i;
+    }
+  }
+  return minIndex;
+}
+
 interface GarbageMapProps {
   userLoc?: { lat: number; lng: number; heading?: number | null } | null;
   externalRouteDest?: { lat: number; lng: number } | null;
@@ -81,61 +118,44 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
   const [selectedSpot, setSelectedSpot] = useState<Hotspot | null>(null);
   const [hasCentered, setHasCentered] = useState(false);
   const [activeRoute, setActiveRoute] = useState<[number, number][] | null>(null);
+  const [fullRoute, setFullRoute] = useState<[number, number][] | null>(null);
+  const [currentDestination, setCurrentDestination] = useState<{lat: number, lng: number} | null>(null);
   const [isRouting, setIsRouting] = useState(false);
   const [isLiveNavigation, setIsLiveNavigation] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
 
-  const handleNavigate = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!userLoc || !selectedSpot) return;
-    setIsRouting(true);
-    try {
-      const start = { lng: userLoc.lng, lat: userLoc.lat };
-      const end = { lng: selectedSpot.pos[1], lat: selectedSpot.pos[0] };
-      const response = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`
-      );
-      const data = await response.json();
-      if (data.routes?.length > 0) {
-        const coords = data.routes[0].geometry.coordinates;
-        setActiveRoute(coords);
-        setSelectedSpot(null); // Hide popup to view route
-        
-        // Calculate bounding box of the route to fit the camera
-        const routeBounds = coords.reduce((acc: [[number, number], [number, number]], coord: [number, number]) => {
-          return [
-            [Math.min(acc[0][0], coord[0]), Math.min(acc[0][1], coord[1])],
-            [Math.max(acc[1][0], coord[0]), Math.max(acc[1][1], coord[1])]
-          ] as [[number, number], [number, number]];
-        }, [[Infinity, Infinity], [-Infinity, -Infinity]]);
-        
-        if (mapRef.current) {
-          mapRef.current.fitBounds(routeBounds, { padding: 60, duration: 1500 });
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch route:", error);
-      alert("Failed to fetch routing data. Please try again.");
-    } finally {
-      setIsRouting(false);
+  // Sync externalRouteDest to currentDestination
+  useEffect(() => {
+    setCurrentDestination(externalRouteDest || null);
+    if (!externalRouteDest) {
+      setFullRoute(null);
+      setActiveRoute(null);
     }
+  }, [externalRouteDest]);
+
+  const handleNavigate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!selectedSpot) return;
+    setCurrentDestination({ lat: selectedSpot.pos[0], lng: selectedSpot.pos[1] });
+    setSelectedSpot(null); // Hide popup to view route
   };
 
+  // Fetch route when currentDestination changes, or if fullRoute is cleared (off-route)
   useEffect(() => {
-    if (externalRouteDest && userLoc) {
-      const fetchExternalRoute = async () => {
+    if (currentDestination && userLoc && !fullRoute) {
+      const fetchRoute = async () => {
         setIsRouting(true);
         try {
           const start = { lng: userLoc.lng, lat: userLoc.lat };
-          const end = { lng: externalRouteDest.lng, lat: externalRouteDest.lat };
+          const end = { lng: currentDestination.lng, lat: currentDestination.lat };
           const response = await fetch(
             `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`
           );
           const data = await response.json();
           if (data.routes?.length > 0) {
             const coords = data.routes[0].geometry.coordinates;
+            setFullRoute(coords);
             setActiveRoute(coords);
-            setSelectedSpot(null);
             
             const routeBounds = coords.reduce((acc: [[number, number], [number, number]], coord: [number, number]) => {
               return [
@@ -155,9 +175,32 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
           setIsRouting(false);
         }
       };
-      fetchExternalRoute();
+      fetchRoute();
     }
-  }, [externalRouteDest, userLoc]);
+  }, [currentDestination, userLoc, fullRoute]);
+
+  // Dynamic route progression
+  useEffect(() => {
+    if (!fullRoute || !userLoc) return;
+    
+    const userPoint: [number, number] = [userLoc.lng, userLoc.lat];
+    const closestIdx = getClosestSegmentIndex(userPoint, fullRoute);
+    
+    const closestSegmentV = fullRoute[closestIdx];
+    const nextV = fullRoute[Math.min(closestIdx + 1, fullRoute.length - 1)];
+    const dist1 = getDistanceInMeters(userPoint[1], userPoint[0], closestSegmentV[1], closestSegmentV[0]);
+    const dist2 = getDistanceInMeters(userPoint[1], userPoint[0], nextV[1], nextV[0]);
+    const offRouteDist = Math.min(dist1, dist2);
+
+    if (offRouteDist > 50 && closestIdx < fullRoute.length - 2) {
+       // Off route (> 50m). Clear fullRoute to trigger re-fetch from current userLoc!
+       setFullRoute(null);
+    } else {
+       // Snap user to route and prune history
+       const prunedRoute = [userPoint, ...fullRoute.slice(closestIdx + 1)];
+       setActiveRoute(prunedRoute);
+    }
+  }, [userLoc, fullRoute]);
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -554,6 +597,8 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
               onClick={() => {
                 setIsLiveNavigation(false);
                 setActiveRoute(null);
+                setFullRoute(null);
+                setCurrentDestination(null);
                 if (mapRef.current) {
                   mapRef.current.easeTo({ pitch: 0, bearing: 0, zoom: 15 });
                 }
