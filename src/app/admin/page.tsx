@@ -9,14 +9,37 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [reports, setReports] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [flaggedReports, setFlaggedReports] = useState<any[]>([]);
+  const [flaggedUsers, setFlaggedUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   useEffect(() => {
     if (isAuthenticated) {
       fetchUnderReview();
+      fetchFlaggedData();
     }
   }, [isAuthenticated]);
+
+  const fetchFlaggedData = async () => {
+    const { data: flagsData } = await supabase.from('post_flags').select('report_id');
+    if (flagsData && flagsData.length > 0) {
+      const reportIds = Array.from(new Set(flagsData.map(f => f.report_id)));
+      const { data: reportsData } = await supabase.from('reports').select('*').in('id', reportIds);
+      if (reportsData) {
+        setFlaggedReports(reportsData);
+        
+        const usernames = Array.from(new Set(reportsData.map(r => r.username)));
+        const { data: usersData } = await supabase.from('users').select('*').in('name', usernames);
+        if (usersData) {
+          setFlaggedUsers(usersData);
+        }
+      }
+    } else {
+      setFlaggedReports([]);
+      setFlaggedUsers([]);
+    }
+  };
 
   const fetchUnderReview = async () => {
     setLoading(true);
@@ -89,6 +112,41 @@ export default function AdminPage() {
           message: `A hazard you reported was cleaned! +10 Assist XP.`
         }]);
       }
+      
+      // Grant Delayed Gratification XP to supporters
+      const { data: supporters } = await supabase.from('report_supports').select('username').eq('report_id', report.id);
+      
+      if (supporters && supporters.length > 0) {
+        const eligibleSupporters = supporters
+          .map(s => s.username)
+          .filter(u => u.toLowerCase() !== report.username.toLowerCase() && !squad.map((sq: string) => sq.toLowerCase()).includes(u.toLowerCase()));
+          
+        if (eligibleSupporters.length > 0) {
+          const { data: usersToUpdate } = await supabase.from('users').select('name, xp, level').in('name', eligibleSupporters);
+          
+          if (usersToUpdate) {
+            for (const user of usersToUpdate) {
+              const newXp = (user.xp || 0) + 5;
+              let newLevel = user.level || 1;
+              if (newXp >= newLevel * 50) newLevel += 1;
+              await supabase.from('users').update({ xp: newXp, level: newLevel }).eq('name', user.name);
+            }
+          }
+          
+          const cleaner = squad.length > 0 ? squad[0] : 'Someone';
+          
+          const notifications = eligibleSupporters.map(username => ({
+            username,
+            title: 'Awareness Rewarded!',
+            message: `Your support worked! @${cleaner} just cleaned the spot you supported. +5 Bonus XP!`,
+            type: 'SUPPORT_REWARD',
+            read: false,
+            created_at: new Date().toISOString()
+          }));
+          
+          await supabase.from('notifications').insert(notifications);
+        }
+      }
 
       // Update Report Status
       await supabase.from('reports').update({ status: 'CLEANED' }).eq('id', report.id);
@@ -135,6 +193,32 @@ export default function AdminPage() {
     }
   };
 
+  const handleDeletePost = async (id: number) => {
+    setActionLoading(id);
+    try {
+      await supabase.from('post_flags').delete().eq('report_id', id);
+      await supabase.from('reports').delete().eq('id', id);
+      setFlaggedReports(prev => prev.filter(r => r.id !== id));
+      alert("Post Deleted.");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete post.");
+    }
+    setActionLoading(null);
+  };
+
+  const handleBanUser = async (username: string) => {
+    if (!confirm(`Are you sure you want to ban ${username}?`)) return;
+    try {
+      await supabase.from('users').update({ banned: true }).eq('name', username);
+      setFlaggedUsers(prev => prev.map(u => u.name === username ? { ...u, banned: true } : u));
+      alert(`User ${username} banned.`);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to ban user.");
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
@@ -168,56 +252,104 @@ export default function AdminPage() {
 
         {loading ? (
           <p className="text-zinc-400">Loading reports...</p>
-        ) : reports.length === 0 ? (
-          <div className="text-center py-20 text-zinc-500 font-bold flex flex-col items-center">
-            <CheckCircle2 className="w-16 h-16 mb-4 opacity-50" />
-            <p>All caught up! No cleanups under review.</p>
-          </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2">
-            {reports.map(report => (
-              <div key={report.id} className="glass-panel p-4 rounded-2xl flex flex-col border border-white/10">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-bold text-lg">Report #{report.id}</h3>
-                    <p className="text-xs text-zinc-400 uppercase tracking-widest font-semibold">{report.severity} Severity</p>
+          <>
+            <div className="grid gap-6 md:grid-cols-2">
+              {reports.map(report => (
+                <div key={report.id} className="glass-panel p-4 rounded-2xl flex flex-col border border-white/10">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-bold text-lg">Report #{report.id}</h3>
+                      <p className="text-xs text-zinc-400 uppercase tracking-widest font-semibold">{report.severity} Severity</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-[#d4af37] font-bold">Squad:</p>
+                      <p className="text-sm font-semibold">{report.cleanup_squad?.join(", ") || "Unknown"}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-[#d4af37] font-bold">Squad:</p>
-                    <p className="text-sm font-semibold">{report.cleanup_squad?.join(", ") || "Unknown"}</p>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-2 mb-4 flex-1">
-                  <div>
-                    <p className="text-xs text-zinc-500 uppercase font-bold mb-1">Before</p>
-                    <img src={getImageUrl(report.image_base64)} alt="Before" className="w-full h-32 object-cover rounded-xl" crossOrigin="anonymous" />
+                  <div className="grid grid-cols-2 gap-2 mb-4 flex-1">
+                    <div>
+                      <p className="text-xs text-zinc-500 uppercase font-bold mb-1">Before</p>
+                      <img src={getImageUrl(report.image_base64)} alt="Before" className="w-full h-32 object-cover rounded-xl" crossOrigin="anonymous" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-500 uppercase font-bold mb-1">After</p>
+                      <img src={getImageUrl(report.cleanup_image_base64)} alt="After" className="w-full h-32 object-cover rounded-xl border-2 border-[#10b981]/50" crossOrigin="anonymous" />
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-zinc-500 uppercase font-bold mb-1">After</p>
-                    <img src={getImageUrl(report.cleanup_image_base64)} alt="After" className="w-full h-32 object-cover rounded-xl border-2 border-[#10b981]/50" crossOrigin="anonymous" />
-                  </div>
-                </div>
 
-                <div className="flex space-x-2 mt-auto">
-                  <button 
-                    onClick={() => handleReject(report)}
-                    disabled={actionLoading === report.id}
-                    className="flex-1 py-3 rounded-xl bg-[#ff4d6d]/10 hover:bg-[#ff4d6d]/20 text-[#ff4d6d] font-bold flex items-center justify-center gap-2 border border-[#ff4d6d]/20 transition-all active:scale-95"
-                  >
-                    <XCircle className="w-5 h-5" /> Reject
-                  </button>
-                  <button 
-                    onClick={() => handleApprove(report)}
-                    disabled={actionLoading === report.id}
-                    className="flex-[2] py-3 rounded-xl bg-[#10b981] hover:bg-[#10b981]/90 text-black font-black flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all active:scale-95"
-                  >
-                    <CheckCircle2 className="w-5 h-5" /> Approve & Distribute
-                  </button>
+                  <div className="flex space-x-2 mt-auto">
+                    <button 
+                      onClick={() => handleReject(report)}
+                      disabled={actionLoading === report.id}
+                      className="flex-1 py-3 rounded-xl bg-[#ff4d6d]/10 hover:bg-[#ff4d6d]/20 text-[#ff4d6d] font-bold flex items-center justify-center gap-2 border border-[#ff4d6d]/20 transition-all active:scale-95"
+                    >
+                      <XCircle className="w-5 h-5" /> Reject
+                    </button>
+                    <button 
+                      onClick={() => handleApprove(report)}
+                      disabled={actionLoading === report.id}
+                      className="flex-[2] py-3 rounded-xl bg-[#10b981] hover:bg-[#10b981]/90 text-black font-black flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all active:scale-95"
+                    >
+                      <CheckCircle2 className="w-5 h-5" /> Approve & Distribute
+                    </button>
+                  </div>
                 </div>
+              ))}
+            </div>
+
+            <h2 className="text-2xl font-black text-white mb-6 mt-12 text-[#ff4d6d]">Flagged Posts</h2>
+            {flaggedReports.length === 0 ? (
+              <p className="text-white/50">No flagged posts.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {flaggedReports.map((report) => (
+                  <div key={`flagged-${report.id}`} className="bg-white/5 p-6 rounded-3xl border border-[#ff4d6d]/50">
+                    <p className="text-white mb-2"><strong>Author:</strong> {report.username}</p>
+                    <div className="flex gap-4">
+                      <img src={getImageUrl(report.image_base64)} className="w-1/2 aspect-square object-cover rounded-xl border border-white/20" alt="Post" />
+                      {report.cleanup_image_base64 && (
+                        <img src={getImageUrl(report.cleanup_image_base64)} className="w-1/2 aspect-square object-cover rounded-xl border border-white/20" alt="Cleanup" />
+                      )}
+                    </div>
+                    <div className="mt-4 flex gap-4">
+                      <button 
+                        onClick={() => handleDeletePost(report.id)}
+                        disabled={actionLoading === report.id}
+                        className="flex-1 bg-red-500/20 text-red-500 font-bold py-3 rounded-xl border border-red-500/50 hover:bg-red-500 hover:text-white transition-all"
+                      >
+                        {actionLoading === report.id ? 'Processing...' : 'Delete Post'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+
+            <h2 className="text-2xl font-black text-white mb-6 mt-12 text-[#ff4d6d]">Flagged Profiles</h2>
+            {flaggedUsers.length === 0 ? (
+              <p className="text-white/50">No flagged profiles.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {flaggedUsers.map((user) => (
+                  <div key={`flagged-user-${user.id || user.name}`} className="bg-white/5 p-6 rounded-3xl border border-white/10 flex justify-between items-center">
+                    <div>
+                      <p className="text-white font-bold text-lg">@{user.name}</p>
+                      <p className="text-zinc-400 text-sm">XP: {user.xp} • Level: {user.level}</p>
+                    </div>
+                    <button 
+                      onClick={() => handleBanUser(user.name)}
+                      disabled={user.banned}
+                      className="bg-red-500/20 text-red-500 font-bold px-4 py-2 rounded-xl border border-red-500/50 hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {user.banned ? 'Banned' : 'Ban User'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

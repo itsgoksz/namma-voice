@@ -12,8 +12,15 @@ if (typeof window !== 'undefined') {
 import useSupercluster from "use-supercluster";
 import { getImageUrl } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
-import { Navigation, X, Loader2, LocateFixed } from "lucide-react";
+import { Navigation, X, Loader2, LocateFixed, Trophy, Shield, AlertTriangle } from "lucide-react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
+import * as turf from '@turf/helpers';
+import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
+import { calculateTerritoryLeaderboard, AreaStats } from '@/lib/territories';
+import GarbageCard from '@/components/GarbageCard';
+import { usePostActions } from '@/hooks/usePostActions';
 
 // Initial center
 const center: [number, number] = [12.9000, 77.5850];
@@ -57,6 +64,7 @@ interface Hotspot {
   image_base64?: string;
   status?: string;
   cleanup_image_base64?: string;
+  reported_by?: string;
 }
 
 let cachedHotspots: Hotspot[] | null = null;
@@ -139,7 +147,7 @@ function AnimatedMarker({ targetLng, targetLat, isLiveNavigation, pitchAlignment
   }, [targetLng, targetLat, isLiveNavigation]);
 
   return (
-    <Marker longitude={lng} latitude={lat} anchor="bottom" pitchAlignment={pitchAlignment} rotationAlignment={rotationAlignment}>
+    <Marker longitude={lng} latitude={lat} anchor="top" pitchAlignment={pitchAlignment} rotationAlignment={rotationAlignment}>
       {children}
     </Marker>
   );
@@ -154,23 +162,75 @@ interface GarbageMapProps {
 export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteChange }: GarbageMapProps) {
   const mapRef = useRef<MapRef>(null);
   
-  const [zoom, setZoom] = useState(15);
+  const [zoom, setZoom] = useState(13.5);
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
 
   const [hotspots, setHotspots] = useState<Hotspot[]>(cachedHotspots || []);
   const [guardian, setGuardian] = useState<string>("Loading...");
   const [selectedSpot, setSelectedSpot] = useState<Hotspot | null>(null);
+  const [activePost, setActivePost] = useState<Hotspot | null>(null);
+  const [errorPopup, setErrorPopup] = useState<{title: string, message: string} | null>(null);
   const [hasCentered, setHasCentered] = useState(false);
   const [activeRoute, setActiveRoute] = useState<[number, number][] | null>(null);
   const [fullRoute, setFullRoute] = useState<[number, number][] | null>(null);
+  
+  const buzzedSpots = useRef<Set<string>>(new Set());
+
+  const { supportedPosts, handleSupport, handleFlag, handleOrganise, handleUserClick, PostActionModals } = usePostActions({
+    onUpdatePost: (id, updater) => {
+      setHotspots(prev => prev.map(h => h.id === id ? updater(h as any) as any : h));
+      if (activePost && activePost.id === id) setActivePost(updater(activePost as any) as any);
+      if (selectedSpot && selectedSpot.id === id) setSelectedSpot(updater(selectedSpot as any) as any);
+    },
+    onError: (title, message) => setErrorPopup({ title, message }),
+    onSuccess: (title, message) => alert(`${title}\n${message}`),
+  });
   const [currentDestination, setCurrentDestination] = useState<{lat: number, lng: number} | null>(null);
   const [isRouting, setIsRouting] = useState(false);
   const [isLiveNavigation, setIsLiveNavigation] = useState(false);
+  const [isCameraLocked, setIsCameraLocked] = useState(true);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [routeSteps, setRouteSteps] = useState<any[] | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const offRouteCounter = useRef(0);
 
+  const [territories, setTerritories] = useState<any>(null);
+  const hoveredTerritoryId = useRef<number | string | null>(null);
+  const [hoveredTerritoryData, setHoveredTerritoryData] = useState<AreaStats | null>(null);
+  const [selectedTerritory, setSelectedTerritory] = useState<(AreaStats & { id: number }) | null>(null);
+  const [reportSupports, setReportSupports] = useState<any[]>([]);
+  const isMarkerClicked = useRef(false);
+
+  useEffect(() => {
+    fetch('/territories.json')
+      .then(res => res.json())
+      .then(data => setTerritories(data))
+      .catch(console.error);
+  }, []);
+
+  const handleMapMove = useCallback(() => {
+    if (!mapRef.current || isLiveNavigation) return;
+    const center = mapRef.current.getCenter();
+    const currentZoom = mapRef.current.getZoom();
+    if (currentZoom < 14) return;
+    
+    const centerPx = mapRef.current.project(center);
+    
+    hotspots.forEach(spot => {
+      const spotPx = mapRef.current?.project([spot.pos[1], spot.pos[0]]);
+      if (spotPx) {
+        const distPx = Math.hypot(centerPx.x - spotPx.x, centerPx.y - spotPx.y);
+        if (distPx < 30) {
+          if (!buzzedSpots.current.has(String(spot.id))) {
+            Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+            buzzedSpots.current.add(String(spot.id));
+          }
+        } else {
+          buzzedSpots.current.delete(String(spot.id));
+        }
+      }
+    });
+  }, [hotspots, isLiveNavigation]);
   // Sync externalRouteDest to currentDestination
   useEffect(() => {
     setCurrentDestination(externalRouteDest || null);
@@ -180,10 +240,9 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
     }
   }, [externalRouteDest]);
 
-  const handleNavigate = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!selectedSpot) return;
-    setCurrentDestination({ lat: selectedSpot.pos[0], lng: selectedSpot.pos[1] });
+  const handleNavigate = (lat: number, lng: number) => {
+    setCurrentDestination({ lat, lng });
+    setSelectedSpot(null);
   };
 
   // Fetch route when currentDestination changes, or if fullRoute is cleared (off-route)
@@ -266,9 +325,9 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                const currentStep = steps[idx];
                const maneuverLoc = currentStep.maneuver.location; // [lng, lat]
                const distToManeuver = getDistanceInMeters(userPoint[1], userPoint[0], maneuverLoc[1], maneuverLoc[0]);
-               if (distToManeuver < 25) {
-                 return idx + 1; // Advance step
-               }
+                if (distToManeuver < 25) {
+                  return Math.min(idx + 1, steps.length - 1); // Advance step but don't go out of bounds
+                }
              }
              return idx;
            });
@@ -281,14 +340,17 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const { data, error } = await supabase.from('reports').select('*');
+        const [{ data, error }, { data: supportsData }] = await Promise.all([
+          supabase.from('reports').select('*'),
+          supabase.from('report_supports').select('report_id, username')
+        ]);
         if (error || !data) return;
+        
+        if (supportsData) setReportSupports(supportsData);
+
         const formattedData = data.map((r: any) => ({ 
           ...r, 
-          pos: [
-            r.lat + (Math.random() - 0.5) * 0.0002, 
-            r.lng + (Math.random() - 0.5) * 0.0002
-          ] 
+          pos: [r.lat, r.lng] 
         }));
         cachedHotspots = formattedData;
         setHotspots(formattedData);
@@ -323,7 +385,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
       mapRef.current.flyTo({
         center: [userLoc.lng, userLoc.lat],
         duration: 1500,
-        zoom: 15
+        zoom: 13.5
       });
       setHasCentered(true);
     }
@@ -331,7 +393,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
 
   // Live Navigation tracking with Low-Pass filter for bearing
   useEffect(() => {
-    if (isLiveNavigation && userLoc && mapRef.current) {
+    if (isLiveNavigation && isCameraLocked && userLoc && mapRef.current) {
       const currentBearing = mapRef.current.getBearing();
       let targetBearing = userLoc.heading ?? currentBearing;
       
@@ -350,7 +412,28 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
         easing: (t) => t
       });
     }
-  }, [userLoc, isLiveNavigation]);
+  }, [userLoc, isLiveNavigation, isCameraLocked]);
+
+  // Clear territory highlights if a hotspot is selected, as requested
+  useEffect(() => {
+    if (selectedSpot && mapRef.current) {
+      if (selectedTerritory) {
+        mapRef.current.setFeatureState(
+          { source: 'territories', id: selectedTerritory.id },
+          { active: false }
+        );
+        setSelectedTerritory(null);
+      }
+      if (hoveredTerritoryId.current !== null) {
+        mapRef.current.setFeatureState(
+          { source: 'territories', id: hoveredTerritoryId.current },
+          { hover: false }
+        );
+        hoveredTerritoryId.current = null;
+        setHoveredTerritoryData(null);
+      }
+    }
+  }, [selectedSpot, selectedTerritory]);
 
   useEffect(() => {
     if (onActiveRouteChange) {
@@ -360,14 +443,32 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
 
   // Clustering logic
   const points = useMemo(() => {
-    return hotspots.map(spot => ({
-      type: "Feature" as const,
-      properties: { cluster: false, hotspot: spot, point_count: 1, category: spot.severity },
-      geometry: {
-        type: "Point" as const,
-        coordinates: [spot.pos[1], spot.pos[0]] // GeoJSON expects [lng, lat]
+    const locationCounts: Record<string, number> = {};
+    
+    return hotspots.map(spot => {
+      const locKey = `${spot.pos[0].toFixed(6)},${spot.pos[1].toFixed(6)}`;
+      const order = locationCounts[locKey] || 0;
+      locationCounts[locKey] = order + 1;
+      
+      let renderLat = spot.pos[0];
+      let renderLng = spot.pos[1];
+      
+      if (order > 0) {
+        const radius = 0.00015 * Math.ceil(order / 6); // ~15 meters
+        const angle = (order * Math.PI * 2) / 6;
+        renderLat += Math.cos(angle) * radius;
+        renderLng += Math.sin(angle) * radius;
       }
-    }));
+
+      return {
+        type: "Feature" as const,
+        properties: { cluster: false, hotspot: spot, point_count: 1, category: spot.severity },
+        geometry: {
+          type: "Point" as const,
+          coordinates: [renderLng, renderLat] // GeoJSON expects [lng, lat]
+        }
+      };
+    });
   }, [hotspots]);
 
   const { clusters, supercluster } = useSupercluster({
@@ -383,8 +484,9 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
         initialViewState={{
           latitude: userLoc?.lat || center[0],
           longitude: userLoc?.lng || center[1],
-          zoom: 15
+          zoom: 13.5
         }}
+        onMove={handleMapMove}
         onMoveEnd={evt => {
           setZoom(evt.viewState.zoom);
           setBounds(evt.target.getBounds().toArray().flat() as [number, number, number, number]);
@@ -394,11 +496,183 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
           setBounds(evt.target.getBounds().toArray().flat() as [number, number, number, number]);
         }}
         ref={mapRef}
+// ... (render)
         mapStyle={rasterMapStyle as any}
         maxBounds={allowedBounds}
         maxZoom={22}
         minZoom={13}
         attributionControl={false}
+        interactiveLayerIds={['territory-fill']}
+        dragPan={!selectedSpot}
+        scrollZoom={!selectedSpot}
+        doubleClickZoom={!selectedSpot}
+        dragRotate={!selectedSpot}
+        touchZoomRotate={!selectedSpot}
+        onDragStart={() => {
+          if (isLiveNavigation) setIsCameraLocked(false);
+        }}
+        onMouseMove={e => {
+          if (activeRoute || currentDestination || isLiveNavigation || selectedTerritory || selectedSpot) {
+            if (hoveredTerritoryId.current !== null) {
+              mapRef.current?.setFeatureState(
+                { source: 'territories', id: hoveredTerritoryId.current },
+                { hover: false }
+              );
+              hoveredTerritoryId.current = null;
+              setHoveredTerritoryData(null);
+            }
+            return;
+          }
+
+          if (e.features && e.features.length > 0) {
+            const feature = e.features.find((f: any) => f.layer.id === 'territory-fill');
+            if (feature && feature.id !== undefined) {
+              if (hoveredTerritoryId.current !== feature.id) {
+                if (hoveredTerritoryId.current !== null) {
+                  mapRef.current?.setFeatureState(
+                    { source: 'territories', id: hoveredTerritoryId.current },
+                    { hover: false }
+                  );
+                }
+                hoveredTerritoryId.current = feature.id as any;
+                mapRef.current?.setFeatureState(
+                  { source: 'territories', id: feature.id },
+                  { hover: true }
+                );
+                
+                const stats = calculateTerritoryLeaderboard(feature, hotspots, reportSupports);
+                setHoveredTerritoryData(stats);
+              }
+              return;
+            }
+          }
+          if (hoveredTerritoryId.current !== null) {
+            mapRef.current?.setFeatureState(
+              { source: 'territories', id: hoveredTerritoryId.current },
+              { hover: false }
+            );
+            hoveredTerritoryId.current = null;
+            setHoveredTerritoryData(null);
+          }
+        }}
+        onMouseLeave={() => {
+          if (hoveredTerritoryId.current !== null) {
+            mapRef.current?.setFeatureState(
+              { source: 'territories', id: hoveredTerritoryId.current },
+              { hover: false }
+            );
+            hoveredTerritoryId.current = null;
+            setHoveredTerritoryData(null);
+          }
+        }}
+        onMouseOut={() => {
+          if (hoveredTerritoryId.current !== null) {
+            mapRef.current?.setFeatureState(
+              { source: 'territories', id: hoveredTerritoryId.current },
+              { hover: false }
+            );
+            hoveredTerritoryId.current = null;
+            setHoveredTerritoryData(null);
+          }
+        }}
+        onClick={e => {
+          if (activeRoute || isLiveNavigation || selectedSpot) return;
+          
+          let clientX, clientY;
+          if (e.originalEvent) {
+            if ('clientX' in e.originalEvent) {
+              clientX = (e.originalEvent as any).clientX;
+              clientY = (e.originalEvent as any).clientY;
+            } else if ((e.originalEvent as any).changedTouches && (e.originalEvent as any).changedTouches.length > 0) {
+              clientX = (e.originalEvent as any).changedTouches[0].clientX;
+              clientY = (e.originalEvent as any).changedTouches[0].clientY;
+            }
+          }
+          
+          if (clientX !== undefined && clientY !== undefined) {
+            const element = document.elementFromPoint(clientX, clientY);
+            if (element && element.tagName !== 'CANVAS') {
+              return;
+            }
+          }
+          
+          // Geometric hit-testing as an absolute fallback for iOS Mapbox touch swallowing
+          if (mapRef.current && clusters) {
+            let hitMarker = false;
+            for (const cluster of clusters) {
+              const [lng, lat] = cluster.geometry.coordinates;
+              const px = mapRef.current.project([lng, lat]);
+              const dist = Math.hypot(e.point.x - px.x, e.point.y - px.y);
+              if (dist < 38) { // 38px radius covers our largest markers
+                hitMarker = true;
+                break;
+              }
+            }
+            if (hitMarker) return;
+          }
+          
+          if (e.originalEvent && (e.originalEvent.target as HTMLElement).tagName !== 'CANVAS') return;
+          if (isMarkerClicked.current) return;
+          
+          if (hoveredTerritoryId.current !== null) {
+            mapRef.current?.setFeatureState(
+              { source: 'territories', id: hoveredTerritoryId.current },
+              { hover: false }
+            );
+            hoveredTerritoryId.current = null;
+            setHoveredTerritoryData(null);
+          }
+          if (e.features && e.features.length > 0) {
+            const feature = e.features.find((f: any) => f.layer.id === 'territory-fill');
+            if (feature) {
+              if (selectedTerritory && selectedTerritory.id === feature.id) {
+                mapRef.current?.setFeatureState(
+                  { source: 'territories', id: selectedTerritory.id },
+                  { active: false }
+                );
+                setSelectedTerritory(null);
+                Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                return;
+              }
+
+              Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+              
+              const geom = feature.geometry as any;
+              
+              let poly;
+              if (geom.type === 'Polygon' || geom.type === 'MultiPolygon') {
+                poly = turf.feature(geom);
+              }
+              if (poly) {
+                const stats = calculateTerritoryLeaderboard(feature, hotspots, reportSupports);
+                setSelectedTerritory({ ...stats, id: feature.id as number });
+              }
+              if (selectedTerritory?.id !== undefined) {
+                mapRef.current?.setFeatureState(
+                  { source: 'territories', id: selectedTerritory.id },
+                  { active: false }
+                );
+              }
+              if (feature.id !== undefined) {
+                mapRef.current?.setFeatureState(
+                  { source: 'territories', id: feature.id },
+                  { active: true }
+                );
+              }
+
+              return;
+            }
+          }
+          if (selectedTerritory) {
+            if (selectedTerritory.id !== undefined) {
+              mapRef.current?.setFeatureState(
+                { source: 'territories', id: selectedTerritory.id },
+                { active: false }
+              );
+            }
+            setSelectedTerritory(null);
+          }
+        }}
       >
         {activeRoute && activeRoute.length > 0 && (
           <Source 
@@ -433,6 +707,52 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
             />
           </Source>
         )}
+
+        {territories && (
+          <Source id="territories" type="geojson" data={territories}>
+            <Layer
+              id="territory-fill"
+              type="fill"
+              paint={{
+                'fill-color': '#10b981',
+                'fill-opacity': [
+                  'case',
+                  ['boolean', ['feature-state', 'hover'], false],
+                  0.1,
+                  ['boolean', ['feature-state', 'active'], false],
+                  0.1,
+                  0.0
+                ]
+              }}
+            />
+            <Layer
+              id="territory-line"
+              type="line"
+              paint={{
+                'line-color': '#10b981',
+                'line-width': [
+                  'case',
+                  ['boolean', ['feature-state', 'hover'], false],
+                  2,
+                  ['boolean', ['feature-state', 'active'], false],
+                  2,
+                  1
+                ],
+                'line-dasharray': [3, 4],
+                'line-opacity': [
+                  'case',
+                  ['boolean', ['feature-state', 'hover'], false],
+                  1.0,
+                  ['boolean', ['feature-state', 'active'], false],
+                  1.0,
+                  0.3
+                ]
+              }}
+            />
+          </Source>
+        )}
+
+
         
         {userLoc && (
           <AnimatedMarker
@@ -475,9 +795,9 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
             
             const isNavigating = !!activeRoute;
             let clusterContainsDestination = false;
-            if (isNavigating && selectedSpot) {
+            if (isNavigating && currentDestination) {
               const leaves = supercluster.getLeaves(cluster.id as number, Infinity);
-              clusterContainsDestination = leaves.some((l: any) => l.properties?.hotspot?.id === selectedSpot.id);
+              clusterContainsDestination = leaves.some((l: any) => l.properties?.hotspot?.pos[0] === currentDestination.lat && l.properties?.hotspot?.pos[1] === currentDestination.lng);
             }
             const isDimmed = isNavigating && !clusterContainsDestination;
 
@@ -487,20 +807,36 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                 longitude={longitude}
                 latitude={latitude}
                 anchor="center"
-                onClick={() => {
+                onClick={(e) => {
+                  e.originalEvent.stopPropagation();
+                  isMarkerClicked.current = true;
+                  setTimeout(() => { isMarkerClicked.current = false; }, 1000);
                   if (isLiveNavigation) return;
+                  Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
                   const expansionZoom = Math.min(
                     supercluster.getClusterExpansionZoom(cluster.id as number),
                     22
                   );
-                  mapRef.current?.flyTo({
+                  mapRef.current?.easeTo({
                     center: [longitude, latitude],
                     zoom: expansionZoom,
-                    duration: 500
+                    duration: 800,
+                    easing: (t) => t * (2 - t)
                   });
                 }}
               >
-                <div style={{ width: size, height: size }} className={`relative flex items-center justify-center cursor-pointer transition-all duration-500 ${isDimmed ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
+                <div 
+                  style={{ width: size, height: size }} 
+                  className={`relative flex items-center justify-center cursor-pointer transition-all duration-500 ${isDimmed ? 'opacity-30 pointer-events-none grayscale' : ''}`}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    isMarkerClicked.current = true;
+                    setTimeout(() => { isMarkerClicked.current = false; }, 1000);
+                  }}
+                  onTouchEnd={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
                   {!isDimmed && (
                     <svg className="absolute inset-0 w-full h-full text-[#990000] opacity-40 animate-pulse" viewBox="0 0 100 100" fill="currentColor">
                       <polygon points="50 1 95 25 95 75 50 99 5 75 5 25" />
@@ -551,7 +887,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
           }
 
           const isNavigating = !!activeRoute;
-          const isDestination = isNavigating && selectedSpot?.id === spot.id;
+          const isDestination = isNavigating && currentDestination?.lat === spot.pos[0] && currentDestination?.lng === spot.pos[1];
           const isDimmed = isNavigating && !isDestination;
 
           return (
@@ -563,13 +899,34 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
               onClick={e => {
                 if (isNavigating) return;
                 e.originalEvent.stopPropagation();
+                isMarkerClicked.current = true;
+                setTimeout(() => { isMarkerClicked.current = false; }, 1000);
+                Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
                 setSelectedSpot(spot);
                 setActiveRoute(null); // Clear previous route
+                const currentZoom = mapRef.current?.getZoom() || 13.5;
+                const targetZoom = Math.max(currentZoom, 15.5);
+                const yOffset = typeof window !== 'undefined' && window.innerWidth < 768 ? 150 : 50;
+                mapRef.current?.easeTo({
+                  center: [longitude, latitude],
+                  zoom: targetZoom,
+                  offset: [0, yOffset],
+                  duration: 800,
+                  easing: (t) => t * (2 - t)
+                });
               }}
             >
               <div 
                 className={`relative flex items-center justify-center transition-all duration-500 hover:scale-110 cursor-pointer ${isDimmed ? 'opacity-30 pointer-events-none grayscale' : ''}`} 
                 style={{ width: size, height: size, color }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  isMarkerClicked.current = true;
+                  setTimeout(() => { isMarkerClicked.current = false; }, 1000);
+                }}
+                onTouchEnd={(e) => {
+                  e.stopPropagation();
+                }}
               >
                 {!isDimmed && <div className="absolute inset-0 rounded-full opacity-50 animate-ping" style={{ backgroundColor: glowColor, animationDuration: '2.5s' }} />}
                 <div 
@@ -594,56 +951,59 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
           <Popup
             longitude={selectedSpot.pos[1]}
             latitude={selectedSpot.pos[0]}
-            anchor="bottom"
             onClose={() => setSelectedSpot(null)}
             closeOnClick={false}
             className="custom-maplibre-popup z-[1000]"
             maxWidth="280px"
+            anchor="bottom"
           >
-            <div className="text-center font-bold flex flex-col items-center bg-zinc-900 rounded-xl p-3 border border-white/10 shadow-xl w-60 relative">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              className="relative"
+            >
               <button 
-                onClick={(e) => { e.stopPropagation(); setSelectedSpot(null); setActiveRoute(null); }}
-                className="absolute -top-3 -right-3 bg-zinc-800 border border-white/10 rounded-full p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-700 shadow-md transition-colors z-50"
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  isMarkerClicked.current = true;
+                  setTimeout(() => { isMarkerClicked.current = false; }, 1000);
+                  Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                  setSelectedSpot(null); 
+                  setActiveRoute(null); 
+                }}
+                className="absolute top-2 right-2 bg-black/80 backdrop-blur-sm border border-white/10 rounded-full p-2 text-zinc-400 hover:text-white shadow-xl transition-colors z-[60]"
               >
                 <X className="w-4 h-4" />
               </button>
               
-              {selectedSpot.status === 'CLEANED' && selectedSpot.cleanup_image_base64 ? (
-                <div className="grid grid-cols-2 gap-1 w-full mb-2">
-                  <div className="relative">
-                    <img src={getImageUrl(selectedSpot.image_base64 || "")} alt="Before" className="w-full h-20 object-cover rounded-l-lg" crossOrigin="anonymous" />
-                    <div className="absolute top-1 left-1 bg-black/60 px-1 py-0.5 rounded text-[8px] font-bold text-white tracking-widest uppercase">Before</div>
-                  </div>
-                  <div className="relative">
-                    <img src={getImageUrl(selectedSpot.cleanup_image_base64)} alt="After" className="w-full h-20 object-cover rounded-r-lg" crossOrigin="anonymous" />
-                    <div className="absolute top-1 left-1 bg-[#2E6F40]/80 px-1 py-0.5 rounded text-[8px] font-bold text-white tracking-widest uppercase">Cleaned</div>
-                  </div>
-                </div>
-              ) : selectedSpot.image_base64 ? (
-                <img src={getImageUrl(selectedSpot.image_base64)} alt="Hotspot" className="w-full h-24 object-cover rounded-lg mb-2" crossOrigin="anonymous" />
-              ) : null}
-              
-              {selectedSpot.status === 'CLEANED' ? (
-                 <>
-                   <span className="text-[#10b981] text-lg mt-1 tracking-tight">Cleaned</span>
-                   <span className="text-xs text-slate-500/80 uppercase tracking-widest font-black">Restored Area</span>
-                 </>
-              ) : (
-                 <>
-                   <span className="text-zinc-400 text-xl">{selectedSpot.reports}</span>
-                   <span className="text-xs text-slate-500/80 uppercase tracking-widest font-black">Active Reports</span>
-                   
-                   <button
-                     onClick={handleNavigate}
-                     disabled={isRouting}
-                     className="mt-3 w-full bg-[#f14f4f] text-white font-black py-2 rounded-lg flex items-center justify-center space-x-2 active:scale-95 transition-transform shadow-[0_0_15px_rgba(241,79,79,0.3)] disabled:opacity-50"
-                   >
-                     {isRouting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
-                     <span>{isRouting ? "Routing..." : "Navigate"}</span>
-                   </button>
-                 </>
-              )}
-            </div>
+              <GarbageCard
+                layoutId={`post-${selectedSpot.id}`}
+                post={selectedSpot as any}
+                variant="map"
+                onNavigate={handleNavigate}
+                onImageClick={() => {
+                  Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                  setActivePost(selectedSpot);
+                }}
+                setErrorPopup={setErrorPopup}
+                onSupport={handleSupport}
+                onFlag={handleFlag}
+                onOrganise={handleOrganise}
+                onUserClick={handleUserClick}
+                supportedPosts={supportedPosts}
+                onCleanupSuccess={(id, severity, imageUrl) => {
+                  setSelectedSpot(null);
+                  // Refresh hotspots
+                  supabase.from('reports').select('*').then(({ data }) => {
+                    if (data) {
+                      const formattedData = data.map((r: any) => ({ ...r, pos: [r.lat, r.lng] }));
+                      setHotspots(formattedData);
+                    }
+                  });
+                }}
+              />
+            </motion.div>
           </Popup>
         )}
 
@@ -678,7 +1038,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
 
       {/* Overlays */}
       <AnimatePresence>
-        {guardian && !activeRoute && (
+        {(guardian || selectedTerritory || hoveredTerritoryData) && !activeRoute && !selectedSpot && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -687,14 +1047,14 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
           >
             <div className="glass-panel p-3.5 rounded-2xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
               <h4 className="text-white font-black text-sm mb-1 tracking-wide flex items-center">
-                South Bengaluru 
+                {(selectedTerritory || hoveredTerritoryData)?.area ?? "South Bengaluru"}
               </h4>
               <p className="text-[#ff4d6d] text-xs font-bold mb-2">
-                {hotspots.length} reports live
+                {(selectedTerritory || hoveredTerritoryData)?.reports ?? hotspots.length} reports live
               </p>
               <div className="bg-black/50 rounded-lg p-2 border border-white/5">
                 <p className="text-[#d4af37] text-[10px] font-black uppercase tracking-widest mb-0.5">Sector Guardian</p>
-                <p className="text-white font-black text-xs truncate max-w-[140px]">@{guardian}</p>
+                <p className="text-white font-black text-xs truncate max-w-[140px]">@{(selectedTerritory || hoveredTerritoryData)?.guardian ?? guardian}</p>
               </div>
             </div>
           </motion.div>
@@ -715,16 +1075,27 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                 <Navigation className="w-6 h-6" />
               </div>
               <div className="flex-1">
-                <p className="text-white font-black text-lg leading-tight drop-shadow-md">
-                  {routeSteps[currentStepIndex].maneuver.modifier 
-                    ? `Turn ${routeSteps[currentStepIndex].maneuver.modifier.replace(/-/g, ' ')}` 
-                    : routeSteps[currentStepIndex].maneuver.type === 'arrive' 
-                      ? "Arrive at destination" 
-                      : "Continue straight"}
-                </p>
-                <p className="text-[#10b981] font-bold text-sm">
-                  {routeSteps[currentStepIndex].name || "Unnamed road"} • {userLoc ? Math.round(getDistanceInMeters(userLoc.lat, userLoc.lng, routeSteps[currentStepIndex].maneuver.location[1], routeSteps[currentStepIndex].maneuver.location[0])) : Math.round(routeSteps[currentStepIndex].distance)}m
-                </p>
+                {(() => {
+                  const currentStep = routeSteps[currentStepIndex];
+                  const isArrive = currentStep.maneuver.type === 'arrive';
+                  const distToManeuver = userLoc ? Math.round(getDistanceInMeters(userLoc.lat, userLoc.lng, currentStep.maneuver.location[1], currentStep.maneuver.location[0])) : Math.round(currentStep.distance);
+                  const hasArrived = isArrive && distToManeuver <= 25;
+                  
+                  return (
+                    <>
+                      <p className="text-white font-black text-lg leading-tight drop-shadow-md">
+                        {hasArrived ? "Arrived at location" : currentStep.maneuver.modifier 
+                          ? `Turn ${currentStep.maneuver.modifier.replace(/-/g, ' ')}` 
+                          : isArrive 
+                            ? "Arrive at destination" 
+                            : "Continue straight"}
+                      </p>
+                      <p className="text-[#10b981] font-bold text-sm">
+                        {hasArrived ? "You have reached your destination" : `${currentStep.name || "Unnamed road"} • ${distToManeuver}m`}
+                      </p>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </motion.div>
@@ -752,7 +1123,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
       {activeRoute && (
         <>
           <AnimatePresence>
-            {isLiveNavigation && (
+            {(isLiveNavigation && !isCameraLocked) && (
               <motion.button
                 key="recenter-button"
               initial={{ scale: 0, opacity: 0 }}
@@ -760,6 +1131,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
               exit={{ scale: 0, opacity: 0 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
               onClick={() => {
+                setIsCameraLocked(true);
                 if (mapRef.current && userLoc) {
                   let currentBearing = mapRef.current.getBearing();
                   let targetBearing = userLoc.heading ?? currentBearing;
@@ -797,7 +1169,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                     if (selectedSpot) {
                       mapRef.current.flyTo({ center: [selectedSpot.pos[1], selectedSpot.pos[0]], zoom: 17, pitch: 0, bearing: 0, duration: 1500 });
                     } else {
-                      mapRef.current.easeTo({ pitch: 0, bearing: 0, zoom: 15 });
+                      mapRef.current.easeTo({ pitch: 0, bearing: 0, zoom: 13.5 });
                     }
                   }
                 }}
@@ -815,7 +1187,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                   animate={{ scale: 1, opacity: 1, x: 0 }}
                   exit={{ scale: 0.5, opacity: 0, x: -30, rotate: -45 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  onClick={() => setIsLiveNavigation(true)}
+                  onClick={() => { setIsLiveNavigation(true); setIsCameraLocked(true); }}
                   className="absolute right-0 top-0 bg-[#10b981] text-white font-black w-12 h-12 p-0 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.5)] active:scale-90 transition-colors flex items-center justify-center border border-[#10b981]/30"
                 >
                   <svg className="w-8 h-8 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
@@ -829,7 +1201,101 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
       )}
 
       {/* Border Overlay perfectly overlaying the map */}
-      <div className="absolute inset-0 z-[999] pointer-events-none rounded-2xl border border-white/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]" />
+      <div className="absolute inset-0 z-[990] pointer-events-none rounded-2xl border border-white/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]" />
+
+      {/* Full Screen Post Modal */}
+      {typeof window !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {activePost && (
+            <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-start p-4 pt-[calc(env(safe-area-inset-top)+3rem)] pb-[calc(env(safe-area-inset-bottom)+7rem)] pointer-events-none">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto"
+                onClick={() => setActivePost(null)}
+              />
+              <div
+                className="w-full sm:max-w-md max-h-full overflow-y-auto no-scrollbar relative pointer-events-auto flex flex-col z-10"
+              >
+                <button 
+                  onClick={() => setActivePost(null)}
+                  className="absolute top-4 right-4 z-50 w-8 h-8 bg-black/50 hover:bg-black/80 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white/80 hover:text-white transition-colors shadow-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <GarbageCard
+                   layoutId={`post-${activePost.id}`}
+                   post={activePost as any}
+                   variant="feed"
+                   onNavigate={(lat, lng) => {
+                     handleNavigate(lat, lng);
+                     setActivePost(null);
+                   }}
+                   setErrorPopup={setErrorPopup}
+                   onSupport={handleSupport}
+                   onFlag={handleFlag}
+                   onOrganise={handleOrganise}
+                   onUserClick={(username) => {
+                     setActivePost(null);
+                     handleUserClick(username);
+                   }}
+                   supportedPosts={supportedPosts}
+                   onCleanupSuccess={(id, severity, imageUrl) => {
+                     setActivePost(null);
+                     setSelectedSpot(null);
+                     supabase.from('reports').select('*').then(({ data }) => {
+                       if (data) {
+                         const formattedData = data.map((r: any) => ({ ...r, pos: [r.lat, r.lng] }));
+                         setHotspots(formattedData);
+                       }
+                     });
+                   }}
+                />
+              </div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* Error Popup Modal */}
+      {typeof window !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {errorPopup && (
+            <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setErrorPopup(null)}
+                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                className="relative w-full max-w-sm glass-panel p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center text-center"
+              >
+                <div className="w-16 h-16 rounded-full bg-[#ff4d6d]/20 flex items-center justify-center mb-4 border border-[#ff4d6d]/30">
+                  <AlertTriangle className="w-8 h-8 text-[#ff4d6d]" />
+                </div>
+                <h2 className="text-xl font-black text-white mb-2">{errorPopup.title}</h2>
+                <p className="text-zinc-400 font-medium mb-6 text-sm">{errorPopup.message}</p>
+                <button
+                  onClick={() => setErrorPopup(null)}
+                  className="w-full py-3.5 bg-white/10 hover:bg-white/15 text-white font-black rounded-xl transition-colors pointer-events-auto"
+                >
+                  Got it
+                </button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+      
+      {PostActionModals}
     </div>
   );
 }

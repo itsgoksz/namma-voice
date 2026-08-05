@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<!--[if IE 9]> <html lang="en" class="ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html lang="en"  > <!--<![endif]-->
+  <head>
+    <meta charset="utf-8" />
+      <meta name="csrf_field_name" content="_csrf_token" />
+      <meta name="_csrf_token" content="IjY1ZmEzOTU2ZDZmMWU5OGZiNzNjY2Y3MTIwYmI5OGQ0Y2ZlYTI1N2Ii.anHp0A.f1OzjvxMzTD_k479_RH8biKJuiU" />
+
+      <meta name="generator" content="ckan 2.11.4" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error 404 - CKAN</title>
+
+    
+    <link rel="shortcut icon" href="/images/opencity-fav.png" />
+    
+  
+    
+      
+      
+      
+    
+    
+    
+
+  
+
+
+    
+    <link href="/webassets/base/51d427fe_main.css" rel="stylesheet"/>
+<link href="/webassets/ckanext-geoview/f197a782_geo-resource-styles.css" rel="stylesheet"/>
+<link href="/webassets/ckanext-activity/8dd77216_activity.css" rel="stylesheet"/>
+    
+
+    
+<!-- opencity css -->
+<link rel="stylesheet" href="/css/opencity.css">
+
+<!-- Google tag (gtag.js) --> 
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-82HRKWSW9G"></script>
+<script> 
+window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-82HRKWSW9G'); 
+</script>
+
+
+  </head>
+
+  
+  <body data-site-root="https://data.opencity.in/" data-locale-root="https://data.opencity.in/" >
+
+    
+    <div class="visually-hidden-focusable"><a href="#content">Skip to main content</a></div>
+  
+
+  
+    
+
+ 
+<div class="account-masthead">
+  <div class="container">
+     
+    <nav class="account not-authed" aria-label="Account">
+      <ul class="list-unstyled">
+        
+        <li><a href="/user/login">Log in</a></li>
+         
+      </ul>
+    </nav>
+     
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="container">
+      
+    <nav class="navbar navbar-expand-lg navbar-light">
+      <hgroup class="header-image navbar-left">
+
+      
+
+<a class="logo" href="https://opencity.in/">
+    <img src="/images/opencity-logo.png" alt="CKAN"
+        aria-label="Navigate to Home - CKAN" />
+</a>
+
+
+
+       </hgroup>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-navigation-toggle"
+        aria-controls="main-navigation-toggle" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="fa fa-bars text-white"></span>
+      </button>
+
+      <div class="main-navbar collapse navbar-collapse" id="main-navigation-toggle">
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+          
+            
+    
+    
+
+    <li><a href="/dataset/">Datasets</a></li><li><a href="/group/">Cities</a></li>
+    <li><a href="https://opencity.in/articles">Data Stories</a></li>
+    <li><a href="https://opencity.in/submit-data">Submit Data</a></li>
+    <li><a href="https://opencity.in/about-us">About</a></li>
+    <li><a href="https://oorvani.org/support-us">Donate</a></li>
+
+          </ul>
+
+      
+      
+          <form class="d-flex site-search" action="/dataset/" method="get">
+              <label class="d-none" for="field-sitewide-search">Search Datasets...</label>
+              <input id="field-sitewide-search" class="form-control me-2"  type="text" name="q" placeholder="Search" aria-label="Search datasets..."/>
+              <button class="btn" type="submit" aria-label="Submit"><i class="fa fa-search"></i></button>
+          </form>
+      
+      </div>
+    </nav>
+  </div>
+</header>
+
+  
+    <div class="main">
+      <div id="content" class="container">
+        
+          
+  
+  
+
+
+          
+            <div class="toolbar" role="navigation" aria-label="Breadcrumb">
+              
+
+            </div>
+          
+
+          <div class="row wrapper no-nav">
+            
+            
+            
+
+            
+
+            
+  <article class="module">
+    <div class="module-content">
+      
+      <h1>404 Not Found</h1>
+      
+      The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+    </div>
+    
+    
+  
+  </article>
+
+          </div>
+        
+      </div>
+    </div>
+  
+    <footer class="site-footer">
+  <div class="container footer-wrapper">
+    <div class="row">
+      <div class="col-md-5 footer-left">
+        <div>
+          <img src="/images/open-city-footer.png" alt="opcity-logo" width="387px" height="auto">
+        </div>
+        <p>Democratising data of India’s cities</p>
+        <a href="https://opencity.in/subscribe/" class="substack-btn" tabindex="-1" role="button"
+            aria-disabled="true">Subscribe to our Substack</a>
+      </div>
+      <div class="col-md-3 footer-middle">
+        <ul class="list-unstyled">
+          <li><a href="https://opencity.in/about-us" class="text-decoration-none">About Us</a></li>
+          <li><a href="https://data.opencity.in/dataset/" class="text-decoration-none">Datasets</a></li>
+          <li><a href="https://opencity.in/category/explainers/" class="text-decoration-none">Explainers</a></li>
+          <li><a href="https://opencity.in/category/analysis/" class="text-decoration-none">Analysis</a></li>
+          <li><a href="https://opencity.in/category/jams/" class="text-decoration-none">Jams</a></li>
+          <li><a href="https://oorvani.org/support-us" class="text-decoration-none">Donate</a></li>
+        </ul>
+      </div>
+      <div class="col-md-4 footer-right">
+        <p>A Programme of</p>
+        <img src="/images/oorvani-with-tagline.png" alt="oorvani logo">
+      </div>
+    </div>
+  </div>
+</footer>
+  
+  
+  
+  
+  
+    
+
+  
+
+    
+    <link href="/webassets/vendor/f3b8236b_select2.css" rel="stylesheet"/>
+<link href="/webassets/vendor/53df638c_fontawesome.css" rel="stylesheet"/>
+    <script src="/webassets/vendor/240e5086_jquery.js" type="text/javascript"></script>
+<script src="/webassets/vendor/773d6354_vendor.js" type="text/javascript"></script>
+<script src="/webassets/vendor/6d1ad7e6_bootstrap.js" type="text/javascript"></script>
+<script src="/webassets/vendor/529a0eb7_htmx.js" type="text/javascript"></script>
+<script src="/webassets/base/a65ea3a0_main.js" type="text/javascript"></script>
+<script src="/webassets/base/b1def42f_ckan.js" type="text/javascript"></script>
+<script src="/webassets/activity/0fdb5ee0_activity.js" type="text/javascript"></script>
+  </body>
+</html>

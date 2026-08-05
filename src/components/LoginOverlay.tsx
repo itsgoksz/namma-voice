@@ -70,6 +70,15 @@ export default function LoginOverlay() {
           return;
         }
         
+        // Check if user is banned
+        const { data: userProfile } = await supabase.from('users').select('banned').ilike('name', trimmedName).maybeSingle();
+        if (userProfile && userProfile.banned) {
+          await supabase.auth.signOut();
+          setErrorMsg("Your account has been banned by an administrator due to community flags.");
+          setIsLoading(false);
+          return;
+        }
+        
         // Ensure legacy localStorage is synced
         localStorage.setItem("namma_user", trimmedName);
         setIsOpen(false);

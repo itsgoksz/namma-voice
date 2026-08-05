@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Award, Flame, Leaf, MapPin, Trophy } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -15,7 +16,10 @@ export default function PublicProfileModal({ username, onClose }: PublicProfileM
   const [reportsCount, setReportsCount] = useState(0);
   const [cleanupsCount, setCleanupsCount] = useState(0);
   const [streak, setStreak] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
+    setMounted(true);
     // Lock body scroll
     document.body.style.overflow = 'hidden';
     return () => {
@@ -51,7 +55,7 @@ export default function PublicProfileModal({ username, onClose }: PublicProfileM
     fetchUser();
   }, [username]);
 
-  if (!username) return null;
+  if (!username || !mounted) return null;
 
   const nextLevelXp = user ? user.level * 50 : 50;
   const progress = user ? (user.xp / nextLevelXp) * 100 : 0;
@@ -67,7 +71,7 @@ export default function PublicProfileModal({ username, onClose }: PublicProfileM
     { name: "Legend", icon: "👑", unlocked: user?.level >= 20, req: "Reach Level 20." },
   ];
 
-  return (
+  return createPortal(
     <>
       <div 
         className="fixed inset-0 z-[99999] flex items-center justify-center p-4 overscroll-none touch-none"
@@ -185,6 +189,7 @@ export default function PublicProfileModal({ username, onClose }: PublicProfileM
           display: none;
         }
       ` }} />
-    </>
+    </>,
+    document.body
   );
 }

@@ -128,6 +128,17 @@ export default function Home() {
     getUserStreak(getCurrentUser()).then(setStreak);
     const fetchMissions = async () => {
       try {
+        const feedNavigate = localStorage.getItem('namma_feed_navigate');
+        if (feedNavigate) {
+          try {
+            const dest = JSON.parse(feedNavigate);
+            setMissionRouteDest(dest);
+            localStorage.removeItem('namma_feed_navigate');
+            setIsMissionDismissed(true);
+            sessionStorage.setItem('namma_mission_dismissed', 'true');
+          } catch(e) {}
+        }
+
         const { data: reportsData, error: reportsError } = await supabase.from('reports').select('*');
         if (reportsError || !reportsData) return;
         const data = reportsData.map(r => ({ ...r, pos: [r.lat, r.lng] }));

@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { TrendingUp, TrendingDown, Minus, MapPin, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import PublicProfileModal from "@/components/PublicProfileModal";
+import AreaLeaderboardModal from "@/components/AreaLeaderboardModal";
+import { AreaStats, calculateTerritoryLeaderboard } from "@/lib/territories";
 
 interface User {
   id: number;
@@ -18,39 +21,30 @@ interface User {
 
 export default function LeaderboardPage() {
   const [leaders, setLeaders] = useState<User[]>([]);
-  const [areaStats, setAreaStats] = useState<any[]>([]);
+  const [areaStats, setAreaStats] = useState<AreaStats[]>([]);
   const [activeTab, setActiveTab] = useState<"users" | "areas">("users");
   const [loading, setLoading] = useState(true);
   const [selectedPublicUser, setSelectedPublicUser] = useState<string | null>(null);
+  const [selectedArea, setSelectedArea] = useState<AreaStats | null>(null);
   const currentUser = getCurrentUser();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [{ data: leadersData }, { data: reportsData }] = await Promise.all([
+        const [{ data: leadersData }, { data: reportsData }, { data: supportsData }, territoriesRes] = await Promise.all([
           supabase.from('users').select('*').order('xp', { ascending: false }).limit(50),
-          supabase.from('reports').select('lat, lng, status')
+          supabase.from('reports').select('id, username, severity, timestamp, cleanup_timestamp, cleanup_squad, lat, lng, status'),
+          supabase.from('report_supports').select('report_id, username'),
+          fetch('/territories.json')
         ]);
         
         if (leadersData) setLeaders(leadersData);
-        if (reportsData) {
-          const stats: Record<string, any> = {
-            "Jayanagar": { area: "Jayanagar", reports: 0, cleanups: 0 },
-            "JP Nagar": { area: "JP Nagar", reports: 0, cleanups: 0 },
-            "BTM Layout": { area: "BTM Layout", reports: 0, cleanups: 0 }
-          };
-          reportsData.forEach(r => {
-            let area = "Unknown";
-            if (r.lat >= 12.92 && r.lat <= 12.94 && r.lng >= 77.57 && r.lng <= 77.60) area = "Jayanagar";
-            else if (r.lat >= 12.87 && r.lat <= 12.92 && r.lng >= 77.55 && r.lng <= 77.60) area = "JP Nagar";
-            else if (r.lat >= 12.90 && r.lat <= 12.92 && r.lng >= 77.60 && r.lng <= 77.62) area = "BTM Layout";
-            
-            if (area !== "Unknown") {
-              stats[area].reports += 1;
-              if (r.status === "CLEANED") stats[area].cleanups += 1;
-            }
-          });
-          setAreaStats(Object.values(stats));
+        if (reportsData && territoriesRes.ok) {
+          const territoriesJson = await territoriesRes.json();
+          const stats = territoriesJson.features.map((feature: any) => 
+            calculateTerritoryLeaderboard(feature, reportsData, supportsData || [])
+          );
+          setAreaStats(stats);
         }
       } catch (e) {
         console.error("Failed to fetch leaderboard data", e);
@@ -113,7 +107,12 @@ export default function LeaderboardPage() {
           {/* 2nd Place */}
           <div 
             className="flex flex-col items-center flex-1 cursor-pointer hover:scale-105 transition-transform"
-            onClick={() => top3[1] && setSelectedPublicUser(top3[1].name)}
+            onClick={() => {
+              if (top3[1]) {
+                Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                setSelectedPublicUser(top3[1].name);
+              }
+            }}
           >
             <div className="relative mb-2">
               <div className="w-12 h-12 bg-[#10b981]/5 rounded-full flex items-center justify-center text-2xl border border-[#10b981]/20">🥈</div>
@@ -128,7 +127,12 @@ export default function LeaderboardPage() {
           {/* 1st Place */}
           <div 
             className="flex flex-col items-center flex-1 relative z-10 cursor-pointer hover:scale-105 transition-transform"
-            onClick={() => top3[0] && setSelectedPublicUser(top3[0].name)}
+            onClick={() => {
+              if (top3[0]) {
+                Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                setSelectedPublicUser(top3[0].name);
+              }
+            }}
           >
             <div className="relative mb-2">
               <div className="absolute -top-4 -right-2 transform rotate-12">
@@ -146,7 +150,12 @@ export default function LeaderboardPage() {
           {/* 3rd Place */}
           <div 
             className="flex flex-col items-center flex-1 cursor-pointer hover:scale-105 transition-transform"
-            onClick={() => top3[2] && setSelectedPublicUser(top3[2].name)}
+            onClick={() => {
+              if (top3[2]) {
+                Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                setSelectedPublicUser(top3[2].name);
+              }
+            }}
           >
             <div className="relative mb-2">
               <div className="w-12 h-12 bg-[#10b981]/5 rounded-full flex items-center justify-center text-2xl border border-[#10b981]/20">🥉</div>
@@ -180,7 +189,10 @@ export default function LeaderboardPage() {
           return (
             <div 
               key={user.name || `user-${index}`}
-              onClick={() => setSelectedPublicUser(user.name)}
+              onClick={() => {
+                Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                setSelectedPublicUser(user.name);
+              }}
               className={cn(
                 "flex items-center justify-between p-4 border-b border-[#10b981]/20 last:border-0 cursor-pointer hover:bg-white/5 transition-colors",
                 isCurrentUser && "bg-[#10b981]/5"
@@ -219,7 +231,14 @@ export default function LeaderboardPage() {
           )}
         >
           {areaStats.sort((a,b) => b.reports + b.cleanups - (a.reports + a.cleanups)).map((area, index) => (
-            <div key={area.area} className="bg-black/40 rounded-2xl p-4 border border-white/5 flex flex-col space-y-3 relative overflow-hidden">
+            <div 
+              key={area.area} 
+              onClick={() => {
+                Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                setSelectedArea(area);
+              }}
+              className="bg-black/40 rounded-2xl p-4 border border-white/5 flex flex-col space-y-3 relative overflow-hidden cursor-pointer hover:bg-white/5 transition-colors"
+            >
               <div className="flex justify-between items-center z-10">
                 <div className="flex items-center space-x-2">
                   <span className="text-xl">{index === 0 ? '👑' : '📍'}</span>
@@ -229,16 +248,29 @@ export default function LeaderboardPage() {
                   Rank #{index + 1}
                 </div>
               </div>
-              <div className="flex space-x-4 z-10">
-                <div className="flex flex-col">
-                  <span className="text-xs text-zinc-400 uppercase tracking-wider font-bold">Reports</span>
-                  <span className="text-xl font-black text-white">{area.reports}</span>
+              <div className="flex space-x-3 sm:space-x-4 z-10">
+                <div className="flex flex-col shrink-0">
+                  <span className="text-[10px] sm:text-xs text-zinc-400 uppercase tracking-wider font-bold whitespace-nowrap">Reports</span>
+                  <span className="text-lg sm:text-xl font-black text-white">{area.reports}</span>
                 </div>
-                <div className="w-px bg-white/10"></div>
-                <div className="flex flex-col">
-                  <span className="text-xs text-[#d4af37] uppercase tracking-wider font-bold">Cleanups</span>
-                  <span className="text-xl font-black text-[#d4af37]">{area.cleanups}</span>
+                <div className="w-px bg-white/10 shrink-0"></div>
+                <div className="flex flex-col shrink-0">
+                  <span className="text-[10px] sm:text-xs text-[#d4af37] uppercase tracking-wider font-bold whitespace-nowrap">Cleanups</span>
+                  <span className="text-lg sm:text-xl font-black text-[#d4af37]">{area.cleanups}</span>
                 </div>
+                <div className="w-px bg-white/10 shrink-0"></div>
+                <div className="flex flex-col shrink-0">
+                  <span className="text-[10px] sm:text-xs text-[#10b981] uppercase tracking-wider font-bold whitespace-nowrap">Area XP</span>
+                  <span className="text-lg sm:text-xl font-black text-[#10b981]">{area.leaderboard?.reduce((acc, curr) => acc + curr.xp, 0) || 0}</span>
+                </div>
+                {area.guardian && (
+                  <div className="ml-auto text-right flex flex-col items-end">
+                    <span className="text-[10px] font-black text-[#10b981] uppercase tracking-widest mb-1 flex items-center gap-1">
+                      <Trophy className="w-3 h-3" /> Guardian
+                    </span>
+                    <span className="text-white font-black text-sm truncate max-w-[120px]">@{area.guardian}</span>
+                  </div>
+                )}
               </div>
               {/* Progress bar background indicator */}
               <div 
@@ -258,7 +290,22 @@ export default function LeaderboardPage() {
           <PublicProfileModal 
             key="public-profile-modal"
             username={selectedPublicUser} 
-            onClose={() => setSelectedPublicUser(null)} 
+            onClose={() => {
+              Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+              setSelectedPublicUser(null);
+            }} 
+          />
+        )}
+        {selectedArea && (
+          <AreaLeaderboardModal
+            key="area-leaderboard-modal"
+            area={selectedArea}
+            currentUser={currentUser}
+            onUserClick={(username) => setSelectedPublicUser(username)}
+            onClose={() => {
+              Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+              setSelectedArea(null);
+            }}
           />
         )}
       </AnimatePresence>
