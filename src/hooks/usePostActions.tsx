@@ -437,107 +437,117 @@ export function usePostActions({ onUpdatePost, onError, onSuccess }: UsePostActi
         <div style={{ position: 'absolute', top: '-10000px', left: '-10000px', zIndex: -10 }}>
           <div 
             ref={posterRef} 
-            className="w-[1080px] h-[1920px] bg-[#041f14] flex flex-col font-sans relative overflow-hidden"
+            className="absolute top-[-9999px] left-[-9999px] w-[1080px] h-[1920px] bg-[#020604] flex flex-col overflow-hidden text-white"
+            style={{ fontFamily: 'Inter, sans-serif' }}
           >
-            {/* The Actual Garbage Image as Background */}
-            {sharePost.image_base64 && (
+            {/* Cinematic Background Layer */}
+            {sharePost?.image_base64 && (
               <div className="absolute inset-0 z-0">
-                <img 
-                  src={getImageUrl(sharePost.image_base64)} 
-                  crossOrigin="anonymous" 
-                  alt="Background" 
-                  className="w-full h-full object-cover mix-blend-luminosity opacity-25 blur-[24px] scale-110" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#041f14] via-[#041f14]/80 to-transparent" />
+                <img src={getImageUrl(sharePost.image_base64)} alt="Background" className="w-full h-full object-cover opacity-40 saturate-50 mix-blend-luminosity" crossOrigin="anonymous" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#020604]/80 via-[#020604]/70 to-[#020604] backdrop-blur-[60px]" />
               </div>
             )}
 
-            <div className="absolute top-[-10%] left-[-10%] w-[1000px] h-[1000px] bg-[#10b981] rounded-full blur-[250px] opacity-20" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[1000px] h-[1000px] bg-[#34d399] rounded-full blur-[250px] opacity-10" />
+            {/* Huge Glow Effects */}
+            <div className="absolute top-[-10%] left-[-20%] w-[1200px] h-[1200px] bg-[#10b981] rounded-full mix-blend-screen filter blur-[250px] opacity-40" />
+            <div className="absolute bottom-[-10%] right-[-20%] w-[1200px] h-[1200px] bg-[#0ea5e9] rounded-full mix-blend-screen filter blur-[250px] opacity-30" />
+            
+            {/* Technical Dot Grid overlay */}
+            <div className="absolute inset-0 z-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.4) 1.5px, transparent 0)', backgroundSize: '40px 40px' }} />
 
-            {/* Top Info */}
-            <div className="relative z-10 flex justify-between items-start px-16 pt-16">
-              <div className="flex flex-col">
-                <span className="text-white text-3xl font-black tracking-widest uppercase flex items-center space-x-3 mb-2 opacity-90">
-                  <Target className="w-8 h-8 text-[#10b981]" />
-                  <span>NAMMA HOOD</span>
-                </span>
-                <span className="text-[#10b981]/70 font-mono text-xl tracking-widest uppercase">Community Cleanup Initiative</span>
+            {/* Header */}
+            <div className="relative z-10 w-full px-16 pt-20 flex justify-between items-center">
+              <div className="bg-white/5 backdrop-blur-3xl border border-white/10 px-8 py-5 rounded-full flex items-center space-x-4 shadow-[0_0_50px_rgba(16,185,129,0.2)]">
+                <Target className="w-12 h-12 text-[#10b981]" />
+                <span className="text-white text-3xl font-black tracking-widest uppercase">NAMMA HOOD</span>
               </div>
-              <div className="flex flex-col items-end">
-                <span className="text-white/70 font-mono text-xl tracking-widest bg-black/20 px-5 py-2 rounded-2xl backdrop-blur-md border border-white/10 shadow-sm">
-                  {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                </span>
+              <div className="bg-[#10b981] text-black font-black px-8 py-5 rounded-full text-2xl tracking-widest uppercase shadow-[0_0_40px_rgba(16,185,129,0.5)]">
+                Community Initiative
               </div>
             </div>
 
-            {/* Title / Hero */}
-            <div className="relative z-10 px-16 pt-[calc(env(safe-area-inset-top)+8rem)] pb-[calc(env(safe-area-inset-bottom)+4rem)] flex flex-col border-b border-white/5">
-              <h1 className="text-white text-[9rem] font-black leading-[0.9] tracking-tight uppercase mb-12">
-                <span className="text-white/80 font-bold text-6xl tracking-wider">Community</span> <br/>
-                <span className="text-[#10b981] drop-shadow-[0_10px_30px_rgba(16,185,129,0.3)]">Cleanup</span>
+            {/* Massive Hero Typography */}
+            <div className="relative z-10 px-16 mt-28 flex flex-col">
+              <span className="text-[#10b981] font-mono text-5xl tracking-[0.4em] uppercase mb-4 drop-shadow-xl font-bold">Operation</span>
+              <h1 className="text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/40 text-[13rem] font-black leading-[0.85] tracking-tighter uppercase drop-shadow-2xl">
+                CLEANUP <br/>
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#10b981] to-[#0ea5e9]">DRIVE</span>
               </h1>
-              
-              <div className="flex items-center space-x-6 bg-white/5 backdrop-blur-3xl px-8 py-6 rounded-[3rem] border border-white/10 shadow-xl self-start">
-                <div className="w-24 h-24 overflow-hidden rounded-full border-4 border-[#10b981] shadow-lg">
-                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${getCurrentUser()}`} alt="Avatar" className="w-full h-full bg-zinc-800" />
+            </div>
+
+            {/* Organizer Badge positioned aggressively */}
+            <div className="relative z-20 px-16 mt-16 flex items-center">
+              <div className="flex items-center space-x-6 bg-white/10 backdrop-blur-3xl px-8 py-6 rounded-full border border-white/20 shadow-2xl">
+                <div className="w-24 h-24 overflow-hidden rounded-full border-4 border-[#10b981] shadow-[0_0_30px_rgba(16,185,129,0.4)]">
+                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${getCurrentUser()}`} alt="Avatar" className="w-full h-full bg-zinc-900" />
                 </div>
-                <div className="flex flex-col">
-                  <p className="text-[#10b981] text-lg font-bold uppercase tracking-widest mb-1">Organised By</p>
-                  <p className="text-white text-4xl font-black">@{getCurrentUser()}</p>
+                <div className="flex flex-col pr-6">
+                  <span className="text-[#10b981] text-xl font-bold uppercase tracking-widest mb-1">Organised By</span>
+                  <span className="text-white text-5xl font-black">@{getCurrentUser()}</span>
                 </div>
               </div>
             </div>
 
-            {/* Details Grid */}
-            <div className="relative z-10 flex-1 px-16 pt-16 flex flex-col space-y-6">
+            {/* Bento Grid Details */}
+            <div className="relative z-10 px-16 mt-auto mb-16 flex flex-col space-y-8">
               
-              <div className="flex items-stretch space-x-6">
-                <div className="flex-1 bg-white/5 backdrop-blur-3xl p-10 rounded-[3rem] border border-white/10 shadow-2xl relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-8 opacity-5"><MapPin className="w-48 h-48 text-white" /></div>
-                  <div className="flex items-center space-x-3 mb-6">
-                    <MapPin className="w-8 h-8 text-[#10b981]" />
-                    <span className="text-[#10b981] text-2xl font-bold uppercase tracking-widest">Location</span>
-                  </div>
-                  <span className="text-white text-6xl font-black leading-tight">{organiseLocation}</span>
+              {/* Location Card */}
+              <div className="w-full bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-3xl p-12 rounded-[3rem] border border-white/20 shadow-2xl relative overflow-hidden group">
+                <div className="absolute right-[-5%] top-1/2 -translate-y-1/2 opacity-[0.03] transform scale-[2] pointer-events-none">
+                  <MapPin className="w-96 h-96 text-white" />
                 </div>
-                
-                <div className="flex-1 flex flex-col space-y-6">
-                  <div className="flex-1 bg-white/5 backdrop-blur-3xl p-10 rounded-[3rem] border border-white/10 shadow-2xl">
-                    <div className="flex flex-col justify-center h-full">
-                      <span className="text-[#10b981] text-2xl font-bold uppercase tracking-widest mb-2">Date & Time</span>
-                      <span className="text-white text-5xl font-black">{new Date(organiseDate || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} @ {organiseTime}</span>
+                <div className="relative z-10">
+                  <div className="flex items-center space-x-5 mb-8">
+                    <div className="bg-[#10b981] p-5 rounded-2xl shadow-[0_0_30px_rgba(16,185,129,0.4)]">
+                      <MapPin className="w-12 h-12 text-black" />
+                    </div>
+                    <span className="text-[#10b981] text-4xl font-black uppercase tracking-widest">Location</span>
+                  </div>
+                  <span className="text-white text-7xl font-black leading-tight drop-shadow-md">{organiseLocation}</span>
+                </div>
+              </div>
+
+              {/* Date & Volunteers Row */}
+              <div className="flex space-x-8 w-full h-[400px]">
+                {/* Date/Time */}
+                <div className="flex-1 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-3xl p-12 rounded-[3rem] border border-white/20 shadow-2xl flex flex-col justify-between relative overflow-hidden">
+                  <div className="flex items-center">
+                      <span className="text-[#10b981] text-3xl font-black uppercase tracking-widest">Date & Time</span>
+                  </div>
+                  <div>
+                    <div className="text-white text-7xl font-black tracking-tight mb-4 drop-shadow-lg">
+                      {new Date(organiseDate || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </div>
+                    <div className="text-white/80 text-6xl font-bold tracking-tight">
+                      @ {organiseTime}
                     </div>
                   </div>
-                  <div className="flex-1 bg-[#ff7f50]/10 backdrop-blur-3xl p-10 rounded-[3rem] border border-[#ff7f50]/20 shadow-2xl relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#ff7f50]/20 to-transparent" />
-                    <div className="relative z-10 flex flex-col justify-center h-full">
-                      <span className="text-[#ff7f50] text-2xl font-bold uppercase tracking-widest mb-2">Volunteers Needed</span>
-                      <span className="text-white text-6xl font-black flex items-baseline space-x-2">
-                        <span>{organiseVolunteers}</span>
-                        <span className="text-3xl text-white/50">People</span>
-                      </span>
-                    </div>
+                </div>
+
+                {/* Volunteers */}
+                <div className="flex-1 bg-gradient-to-br from-[#10b981]/20 to-[#0ea5e9]/20 backdrop-blur-3xl p-12 rounded-[3rem] border border-[#10b981]/40 shadow-[0_0_50px_rgba(16,185,129,0.2)] flex flex-col justify-between relative overflow-hidden">
+                  <div className="relative z-10 flex items-center">
+                      <span className="text-[#10b981] text-3xl font-black uppercase tracking-widest">Volunteers</span>
+                  </div>
+                  <div className="relative z-10 flex items-baseline space-x-4">
+                    <span className="text-white text-[10rem] leading-none font-black tracking-tighter drop-shadow-2xl">{organiseVolunteers}</span>
+                    <span className="text-white/80 text-4xl font-bold uppercase tracking-widest">Needed</span>
                   </div>
                 </div>
               </div>
-              
-              <div className="w-full flex items-center justify-between bg-white p-6 rounded-3xl mt-auto shadow-2xl">
+            </div>
+
+            {/* Bold Footer */}
+            <div className="w-full bg-white p-12 flex justify-between items-center z-10 mt-auto border-t-[16px] border-[#10b981]">
                 <div className="flex items-center space-x-8">
-                  <div className="w-24 h-24 bg-black rounded-2xl flex items-center justify-center p-4">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-full h-full"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                  <div className="w-24 h-24 bg-black rounded-3xl flex items-center justify-center shadow-xl">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-12 h-12"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[#10b981] text-3xl font-black uppercase tracking-widest mb-1">Namma Hood App</span>
-                    <span className="text-black text-3xl font-black tracking-tight">Let's clean our city together!</span>
+                    <span className="text-black text-4xl font-black tracking-tight">Let's clean our city together!</span>
                   </div>
                 </div>
-                <div className="flex space-x-3">
-                  <div className="w-4 h-4 rounded-full bg-zinc-300" />
-                  <div className="w-4 h-4 rounded-full bg-zinc-300" />
-                  <div className="w-4 h-4 rounded-full bg-zinc-300" />
-                </div>
-              </div>
             </div>
           </div>
         </div>
