@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, MapPin, X, Target } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { supabase } from '@/lib/supabase';
 import { getCurrentUser, getImageUrl } from '@/lib/api';
 import LocationTag from '@/components/LocationTag';
@@ -46,7 +48,7 @@ export function usePostActions({ onUpdatePost, onError, onSuccess }: UsePostActi
   const [organiseTime, setOrganiseTime] = useState("");
   const [organiseLocation, setOrganiseLocation] = useState("");
   const [organiseVolunteers, setOrganiseVolunteers] = useState("");
-  const [shareData, setShareData] = useState<{blob: Blob, url: string} | null>(null);
+  const [shareData, setShareData] = useState<{url: string, base64: string} | null>(null);
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false);
   
   const posterRef = useRef<HTMLDivElement>(null);
@@ -180,15 +182,15 @@ export function usePostActions({ onUpdatePost, onError, onSuccess }: UsePostActi
         try {
           await new Promise(resolve => setTimeout(resolve, 800));
           if (!posterRef.current) return;
-          const blob = await htmlToImage.toBlob(posterRef.current, { 
+          const dataUrl = await htmlToImage.toJpeg(posterRef.current, { 
             backgroundColor: '#050505',
             pixelRatio: 2,
             cacheBust: true,
             skipFonts: true,
           });
           
-          if (blob) {
-            setShareData({ blob, url: URL.createObjectURL(blob) });
+          if (dataUrl) {
+            setShareData({ url: dataUrl, base64: dataUrl.split(',')[1] });
           }
           setIsGeneratingPoster(false);
         } catch (err) {
@@ -205,32 +207,46 @@ export function usePostActions({ onUpdatePost, onError, onSuccess }: UsePostActi
   const handleFinalShare = async () => {
     if (!shareData) return;
     try {
-      const file = new File([shareData.blob], `cleanup-poster-${sharePost?.id}.jpg`, { type: 'image/jpeg' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'Organise Cleanup',
-          text: `Join my cleanup at ${organiseLocation} on ${organiseDate} at ${organiseTime}! We need ${organiseVolunteers} volunteers. Download Namma Hood and search for this spot!`,
+      let isNativeShared = false;
+      
+      try {
+        const fileName = `cleanup-poster-${sharePost?.id}-${Date.now()}.jpg`;
+        const savedFile = await Filesystem.writeFile({
+          path: fileName,
+          data: shareData.base64,
+          directory: Directory.Cache
         });
         
-        const today = new Date().toISOString().split('T')[0];
-        const sharedKey = `namma_poster_shared_${today}`;
-        if (!localStorage.getItem(sharedKey)) {
-          const { data: user } = await supabase.from('users').select('xp, level').eq('name', getCurrentUser()).single();
-          if (user) {
-            const newXp = (user.xp || 0) + 40;
-            let newLevel = user.level || 1;
-            if (newXp >= newLevel * 50) newLevel += 1;
-            await supabase.from('users').update({ xp: newXp, level: newLevel }).eq('name', getCurrentUser());
-            localStorage.setItem(sharedKey, 'true');
-            if (onSuccess) onSuccess("XP Awarded!", "You earned 40 XP for sharing a cleanup poster!");
-          }
-        }
-      } else {
+        await Share.share({
+          title: 'Organise Cleanup',
+          text: `Join my cleanup at ${organiseLocation} on ${organiseDate} at ${organiseTime}! We need ${organiseVolunteers} volunteers.`,
+          url: savedFile.uri,
+          dialogTitle: 'Share Poster'
+        });
+        isNativeShared = true;
+      } catch (capErr) {
+        console.warn("Capacitor share failed, falling back to web", capErr);
+      }
+      
+      if (!isNativeShared) {
         const link = document.createElement('a');
         link.href = shareData.url;
         link.download = `cleanup-poster-${sharePost?.id}.jpg`;
         link.click();
+      }
+      
+      const today = new Date().toISOString().split('T')[0];
+      const sharedKey = `namma_poster_shared_${today}`;
+      if (!localStorage.getItem(sharedKey)) {
+        const { data: user } = await supabase.from('users').select('xp, level').eq('name', getCurrentUser()).single();
+        if (user) {
+          const newXp = (user.xp || 0) + 40;
+          let newLevel = user.level || 1;
+          if (newXp >= newLevel * 50) newLevel += 1;
+          await supabase.from('users').update({ xp: newXp, level: newLevel }).eq('name', getCurrentUser());
+          localStorage.setItem(sharedKey, 'true');
+          if (onSuccess) onSuccess("XP Awarded!", "You earned 40 XP for sharing a cleanup poster!");
+        }
       }
     } catch (err) {
       console.error("Share failed", err);
@@ -384,8 +400,8 @@ export function usePostActions({ onUpdatePost, onError, onSuccess }: UsePostActi
                   <p className="text-zinc-400 text-xs text-center mb-6">A custom cleanup poster has been generated for you.</p>
                   
                   <div className="w-full aspect-[9/16] bg-black rounded-xl overflow-hidden border border-white/10 flex items-center justify-center mb-6 shadow-2xl">
-                    {shareData && shareData.blob ? (
-                      <img src={URL.createObjectURL(shareData.blob)} alt="Preview" className="w-full h-full object-contain" />
+                    {shareData && shareData.url ? (
+                      <img src={shareData.url} alt="Preview" className="w-full h-full object-contain" />
                     ) : (
                       <div className="flex flex-col items-center">
                         <div className="w-8 h-8 border-4 border-[#ff7f50]/20 border-t-[#ff7f50] rounded-full animate-spin mb-3" />
@@ -512,8 +528,8 @@ export function usePostActions({ onUpdatePost, onError, onSuccess }: UsePostActi
                     <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-full h-full"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-black text-4xl font-black mb-1 tracking-tight">Search for this spot on</span>
-                    <span className="text-[#10b981] text-3xl font-black uppercase tracking-widest">Namma Hood App</span>
+                    <span className="text-[#10b981] text-3xl font-black uppercase tracking-widest mb-1">Namma Hood App</span>
+                    <span className="text-black text-3xl font-black tracking-tight">Let's clean our city together!</span>
                   </div>
                 </div>
                 <div className="flex space-x-3">
