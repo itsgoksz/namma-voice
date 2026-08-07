@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
-import { TrendingUp, TrendingDown, Minus, MapPin, Trophy } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, MapPin, Trophy, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
@@ -61,7 +61,7 @@ export default function LeaderboardPage() {
   const rest = leaders.slice(3);
 
   return (
-    <div className="p-4 space-y-6 h-full overflow-hidden flex flex-col pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
+    <div className="p-4 space-y-6 h-full overflow-hidden flex flex-col pt-safe-header pb-[calc(env(safe-area-inset-bottom)+6rem)] max-w-md mx-auto relative z-10">
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -102,7 +102,7 @@ export default function LeaderboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="flex justify-center items-end h-48 space-x-2 mt-8 mb-4 px-2"
+          className="flex justify-center items-end h-44 space-x-2 mt-4 mb-4 px-2"
         >
           {/* 2nd Place */}
           <div 
@@ -115,12 +115,12 @@ export default function LeaderboardPage() {
             }}
           >
             <div className="relative mb-2">
-              <div className="w-12 h-12 bg-[#10b981]/5 rounded-full flex items-center justify-center text-2xl border border-[#10b981]/20">🥈</div>
+              <div className="w-10 h-10 bg-[#10b981]/5 rounded-full flex items-center justify-center text-xl border border-[#10b981]/20">🥈</div>
             </div>
             <p className="text-sm font-bold text-white truncate max-w-[80px]">{top3[1]?.name}</p>
             <p className="text-[#d4af37] text-xs font-black">{top3[1]?.xp} Eco XP</p>
-            <div className="w-full bg-[rgba(30,30,30,0.8)] h-16 rounded-t-2xl mt-2 border-t border-[#10b981]/20 flex items-center justify-center">
-              <span className="text-white/40 font-black text-2xl">2</span>
+            <div className="w-full bg-[rgba(30,30,30,0.8)] h-10 rounded-t-2xl mt-2 border-t border-[#10b981]/20 flex items-center justify-center">
+              <span className="text-white/40 font-black text-xl">2</span>
             </div>
           </div>
 
@@ -138,12 +138,12 @@ export default function LeaderboardPage() {
               <div className="absolute -top-4 -right-2 transform rotate-12">
                 <Trophy className="w-6 h-6 text-yellow-400 fill-current drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
               </div>
-              <div className="w-16 h-16 bg-[#10b981]/5 rounded-full flex items-center justify-center text-3xl border-2 border-[#10b981]/20 shadow-none">🥇</div>
+              <div className="w-14 h-14 bg-[#10b981]/5 rounded-full flex items-center justify-center text-2xl border-2 border-[#10b981]/20 shadow-none">🥇</div>
             </div>
-            <p className="text-base font-bold text-white truncate max-w-[90px]">{top3[0]?.name}</p>
+            <p className="text-sm font-bold text-white truncate max-w-[90px]">{top3[0]?.name}</p>
             <p className="text-[#d4af37] text-sm font-black">{top3[0]?.xp} Eco XP</p>
-            <div className="w-full bg-[rgba(21,57,57,0.9)] h-24 rounded-t-2xl mt-2 border-t border-[#10b981]/20 flex items-center justify-center shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
-              <span className="text-zinc-400 font-black text-4xl">1</span>
+            <div className="w-full bg-[rgba(21,57,57,0.9)] h-16 rounded-t-2xl mt-2 border-t border-[#10b981]/20 flex items-center justify-center shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
+              <span className="text-zinc-400 font-black text-3xl">1</span>
             </div>
           </div>
 
@@ -158,12 +158,12 @@ export default function LeaderboardPage() {
             }}
           >
             <div className="relative mb-2">
-              <div className="w-12 h-12 bg-[#10b981]/5 rounded-full flex items-center justify-center text-2xl border border-[#10b981]/20">🥉</div>
+              <div className="w-10 h-10 bg-[#10b981]/5 rounded-full flex items-center justify-center text-xl border border-[#10b981]/20">🥉</div>
             </div>
             <p className="text-sm font-bold text-white truncate max-w-[80px]">{top3[2]?.name}</p>
             <p className="text-[#d4af37] text-xs font-black">{top3[2]?.xp} Eco XP</p>
-            <div className="w-full bg-[rgba(20,20,20,0.8)] h-12 rounded-t-2xl mt-2 border-t border-[#10b981]/20 flex items-center justify-center">
-              <span className="text-zinc-400 font-black text-xl">3</span>
+            <div className="w-full bg-[rgba(20,20,20,0.8)] h-8 rounded-t-2xl mt-2 border-t border-[#10b981]/20 flex items-center justify-center">
+              <span className="text-zinc-400 font-black text-lg">3</span>
             </div>
           </div>
         </motion.div>
@@ -248,27 +248,36 @@ export default function LeaderboardPage() {
                   Rank #{index + 1}
                 </div>
               </div>
-              <div className="flex space-x-3 sm:space-x-4 z-10">
-                <div className="flex flex-col shrink-0">
-                  <span className="text-[10px] sm:text-xs text-zinc-400 uppercase tracking-wider font-bold whitespace-nowrap">Reports</span>
-                  <span className="text-lg sm:text-xl font-black text-white">{area.reports}</span>
+              <div className="flex flex-wrap justify-between gap-y-3 z-10 w-full items-center">
+                <div className="flex space-x-3 sm:space-x-4 items-center shrink-0">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] sm:text-[10px] text-zinc-400 uppercase tracking-wider font-bold whitespace-nowrap">Reports</span>
+                    <span className="text-lg sm:text-xl font-black text-white">{area.reports}</span>
+                  </div>
+                  <div className="w-px h-8 bg-white/10"></div>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] sm:text-[10px] text-[#d4af37] uppercase tracking-wider font-bold whitespace-nowrap">Cleanups</span>
+                    <span className="text-lg sm:text-xl font-black text-[#d4af37]">{area.cleanups}</span>
+                  </div>
+                  <div className="w-px h-8 bg-white/10"></div>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] sm:text-[10px] text-[#10b981] uppercase tracking-wider font-bold whitespace-nowrap">Area XP</span>
+                    <span className="text-lg sm:text-xl font-black text-[#10b981]">{area.leaderboard?.reduce((acc, curr) => acc + curr.xp, 0) || 0}</span>
+                  </div>
                 </div>
-                <div className="w-px bg-white/10 shrink-0"></div>
-                <div className="flex flex-col shrink-0">
-                  <span className="text-[10px] sm:text-xs text-[#d4af37] uppercase tracking-wider font-bold whitespace-nowrap">Cleanups</span>
-                  <span className="text-lg sm:text-xl font-black text-[#d4af37]">{area.cleanups}</span>
-                </div>
-                <div className="w-px bg-white/10 shrink-0"></div>
-                <div className="flex flex-col shrink-0">
-                  <span className="text-[10px] sm:text-xs text-[#10b981] uppercase tracking-wider font-bold whitespace-nowrap">Area XP</span>
-                  <span className="text-lg sm:text-xl font-black text-[#10b981]">{area.leaderboard?.reduce((acc, curr) => acc + curr.xp, 0) || 0}</span>
-                </div>
-                {area.guardian && (
-                  <div className="ml-auto text-right flex flex-col items-end">
-                    <span className="text-[10px] font-black text-[#10b981] uppercase tracking-widest mb-1 flex items-center gap-1">
-                      <Trophy className="w-3 h-3" /> Guardian
+                {area.guardian ? (
+                  <div className="text-right flex flex-col items-end shrink-0 bg-[#10b981]/10 px-3 py-1.5 rounded-xl border border-[#10b981]/20">
+                    <span className="text-[9px] font-black text-[#10b981] uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                      <Trophy className="w-2.5 h-2.5" /> Guardian
                     </span>
-                    <span className="text-white font-black text-sm truncate max-w-[120px]">@{area.guardian}</span>
+                    <span className="text-white font-bold text-sm truncate max-w-[100px]">@{area.guardian}</span>
+                  </div>
+                ) : (
+                  <div className="text-right flex flex-col items-end shrink-0 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
+                    <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                      <Shield className="w-2.5 h-2.5" /> Guardian
+                    </span>
+                    <span className="text-zinc-400 font-bold text-sm truncate max-w-[100px]">Unclaimed</span>
                   </div>
                 )}
               </div>

@@ -431,33 +431,32 @@ export function usePostActions({ onUpdatePost, onError, onSuccess }: UsePostActi
           </div>
         )}
       </AnimatePresence>
-
       {/* Hidden Share Poster rendering element */}
       {sharePost && (
         <div style={{ position: 'absolute', top: '-10000px', left: '-10000px', zIndex: -10 }}>
           <div 
             ref={posterRef} 
-            className="absolute top-[-9999px] left-[-9999px] w-[1080px] h-[1920px] bg-[#020604] flex flex-col overflow-hidden text-white"
+            className="w-[1080px] h-[1920px] bg-[#020604] flex flex-col overflow-hidden text-white relative"
             style={{ fontFamily: 'Inter, sans-serif' }}
           >
             {/* Cinematic Background Layer */}
             {sharePost?.image_base64 && (
-              <div className="absolute inset-0 z-0">
-                <img src={getImageUrl(sharePost.image_base64)} alt="Background" className="w-full h-full object-cover opacity-40 saturate-50 mix-blend-luminosity" crossOrigin="anonymous" />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#020604]/80 via-[#020604]/70 to-[#020604] backdrop-blur-[60px]" />
+              <div className="absolute inset-0 z-0 bg-[#020604]">
+                <img src={getImageUrl(sharePost.image_base64)} alt="Background" className="w-full h-full object-cover opacity-20" crossOrigin="anonymous" />
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,6,4,0.7) 0%, rgba(2,6,4,0.85) 50%, rgba(2,6,4,0.95) 100%)' }} />
               </div>
             )}
 
-            {/* Huge Glow Effects */}
-            <div className="absolute top-[-10%] left-[-20%] w-[1200px] h-[1200px] bg-[#10b981] rounded-full mix-blend-screen filter blur-[250px] opacity-40" />
-            <div className="absolute bottom-[-10%] right-[-20%] w-[1200px] h-[1200px] bg-[#0ea5e9] rounded-full mix-blend-screen filter blur-[250px] opacity-30" />
+            {/* Huge Glow Effects without CSS filters */}
+            <div className="absolute top-[-10%] left-[-20%] w-[1200px] h-[1200px]" style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.3) 0%, transparent 70%)' }} />
+            <div className="absolute bottom-[-10%] right-[-20%] w-[1200px] h-[1200px]" style={{ background: 'radial-gradient(circle, rgba(14,165,233,0.2) 0%, transparent 70%)' }} />
             
             {/* Technical Dot Grid overlay */}
-            <div className="absolute inset-0 z-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.4) 1.5px, transparent 0)', backgroundSize: '40px 40px' }} />
+            <div className="absolute inset-0 z-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.4) 1.5px, transparent 0)', backgroundSize: '40px 40px' }} />
 
             {/* Header */}
             <div className="relative z-10 w-full px-16 pt-20 flex justify-between items-center">
-              <div className="bg-white/5 backdrop-blur-3xl border border-white/10 px-8 py-5 rounded-full flex items-center space-x-4 shadow-[0_0_50px_rgba(16,185,129,0.2)]">
+              <div className="bg-white/10 border border-white/20 px-8 py-5 rounded-full flex items-center space-x-4 shadow-[0_0_50px_rgba(16,185,129,0.2)]">
                 <Target className="w-12 h-12 text-[#10b981]" />
                 <span className="text-white text-3xl font-black tracking-widest uppercase">NAMMA HOOD</span>
               </div>
@@ -468,18 +467,18 @@ export function usePostActions({ onUpdatePost, onError, onSuccess }: UsePostActi
 
             {/* Massive Hero Typography */}
             <div className="relative z-10 px-16 mt-28 flex flex-col">
-              <span className="text-[#10b981] font-mono text-5xl tracking-[0.4em] uppercase mb-4 drop-shadow-xl font-bold">Operation</span>
-              <h1 className="text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/40 text-[13rem] font-black leading-[0.85] tracking-tighter uppercase drop-shadow-2xl">
+              <span className="text-[#10b981] font-mono text-5xl tracking-[0.4em] uppercase mb-4 font-bold" style={{ textShadow: '0 4px 20px rgba(16,185,129,0.4)' }}>Operation</span>
+              <h1 className="text-white text-[13rem] font-black leading-[0.85] tracking-tighter uppercase" style={{ textShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
                 CLEANUP <br/>
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#10b981] to-[#0ea5e9]">DRIVE</span>
+                <span className="text-[#10b981]">DRIVE</span>
               </h1>
             </div>
 
-            {/* Organizer Badge positioned aggressively */}
+            {/* Organizer Badge */}
             <div className="relative z-20 px-16 mt-16 flex items-center">
-              <div className="flex items-center space-x-6 bg-white/10 backdrop-blur-3xl px-8 py-6 rounded-full border border-white/20 shadow-2xl">
-                <div className="w-24 h-24 overflow-hidden rounded-full border-4 border-[#10b981] shadow-[0_0_30px_rgba(16,185,129,0.4)]">
-                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${getCurrentUser()}`} alt="Avatar" className="w-full h-full bg-zinc-900" />
+              <div className="flex items-center space-x-6 bg-white/15 px-8 py-6 rounded-full border border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.3)]">
+                <div className="w-24 h-24 overflow-hidden rounded-full border-4 border-[#10b981] shadow-[0_0_30px_rgba(16,185,129,0.4)] bg-zinc-900">
+                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${getCurrentUser()}`} alt="Avatar" className="w-full h-full" crossOrigin="anonymous" />
                 </div>
                 <div className="flex flex-col pr-6">
                   <span className="text-[#10b981] text-xl font-bold uppercase tracking-widest mb-1">Organised By</span>
@@ -492,7 +491,7 @@ export function usePostActions({ onUpdatePost, onError, onSuccess }: UsePostActi
             <div className="relative z-10 px-16 mt-auto mb-16 flex flex-col space-y-8">
               
               {/* Location Card */}
-              <div className="w-full bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-3xl p-12 rounded-[3rem] border border-white/20 shadow-2xl relative overflow-hidden group">
+              <div className="w-full bg-gradient-to-br from-[#101512] to-[#080d0a] p-12 rounded-[3rem] border border-white/10 shadow-[0_15px_50px_rgba(0,0,0,0.5)] relative overflow-hidden group">
                 <div className="absolute right-[-5%] top-1/2 -translate-y-1/2 opacity-[0.03] transform scale-[2] pointer-events-none">
                   <MapPin className="w-96 h-96 text-white" />
                 </div>
@@ -503,19 +502,19 @@ export function usePostActions({ onUpdatePost, onError, onSuccess }: UsePostActi
                     </div>
                     <span className="text-[#10b981] text-4xl font-black uppercase tracking-widest">Location</span>
                   </div>
-                  <span className="text-white text-7xl font-black leading-tight drop-shadow-md">{organiseLocation}</span>
+                  <span className="text-white text-7xl font-black leading-tight" style={{ textShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>{organiseLocation}</span>
                 </div>
               </div>
 
               {/* Date & Volunteers Row */}
               <div className="flex space-x-8 w-full h-[400px]">
                 {/* Date/Time */}
-                <div className="flex-1 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-3xl p-12 rounded-[3rem] border border-white/20 shadow-2xl flex flex-col justify-between relative overflow-hidden">
+                <div className="flex-1 bg-gradient-to-br from-[#101512] to-[#080d0a] p-12 rounded-[3rem] border border-white/10 shadow-[0_15px_50px_rgba(0,0,0,0.5)] flex flex-col justify-between relative overflow-hidden">
                   <div className="flex items-center">
                       <span className="text-[#10b981] text-3xl font-black uppercase tracking-widest">Date & Time</span>
                   </div>
                   <div>
-                    <div className="text-white text-7xl font-black tracking-tight mb-4 drop-shadow-lg">
+                    <div className="text-white text-7xl font-black tracking-tight mb-4" style={{ textShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
                       {new Date(organiseDate || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </div>
                     <div className="text-white/80 text-6xl font-bold tracking-tight">
@@ -525,12 +524,12 @@ export function usePostActions({ onUpdatePost, onError, onSuccess }: UsePostActi
                 </div>
 
                 {/* Volunteers */}
-                <div className="flex-1 bg-gradient-to-br from-[#10b981]/20 to-[#0ea5e9]/20 backdrop-blur-3xl p-12 rounded-[3rem] border border-[#10b981]/40 shadow-[0_0_50px_rgba(16,185,129,0.2)] flex flex-col justify-between relative overflow-hidden">
+                <div className="flex-1 bg-gradient-to-br from-[#0c2e22] to-[#041f14] p-12 rounded-[3rem] border border-[#10b981]/30 shadow-[0_0_50px_rgba(16,185,129,0.15)] flex flex-col justify-between relative overflow-hidden">
                   <div className="relative z-10 flex items-center">
                       <span className="text-[#10b981] text-3xl font-black uppercase tracking-widest">Volunteers</span>
                   </div>
                   <div className="relative z-10 flex items-baseline space-x-4">
-                    <span className="text-white text-[10rem] leading-none font-black tracking-tighter drop-shadow-2xl">{organiseVolunteers}</span>
+                    <span className="text-white text-[10rem] leading-none font-black tracking-tighter" style={{ textShadow: '0 10px 30px rgba(0,0,0,0.4)' }}>{organiseVolunteers}</span>
                     <span className="text-white/80 text-4xl font-bold uppercase tracking-widest">Needed</span>
                   </div>
                 </div>

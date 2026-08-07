@@ -60,6 +60,7 @@ export type { FeedItem };
 interface GarbageCardProps {
   post: FeedItem;
   variant: "feed" | "map";
+  className?: string;
   supportedPosts?: Set<number>;
   volunteeredPosts?: Set<number>;
   onSupport?: (e: React.MouseEvent, id: number) => void;
@@ -86,7 +87,8 @@ export default function GarbageCard({
   setErrorPopup,
   onNavigate,
   onImageClick,
-  layoutId
+  layoutId,
+  className
 }: GarbageCardProps) {
   const [isCleaningUp, setIsCleaningUp] = useState(false);
 
@@ -172,10 +174,12 @@ export default function GarbageCard({
       layoutId={layoutId}
       initial={isMap ? { opacity: 0, scale: 0.8, y: 15 } : { opacity: 0, y: 20 }}
       animate={isMap ? { opacity: 1, scale: 1, y: 0 } : { opacity: 1, y: 0 }}
-      transition={isMap ? { type: "spring", stiffness: 400, damping: 25 } : undefined}
+      exit={isMap ? { opacity: 0, scale: 0.8, y: 15 } : { opacity: 0, y: 150, scale: 0.95 }}
+      transition={isMap ? { type: "spring", stiffness: 400, damping: 25 } : { type: "spring", stiffness: 300, damping: 25 }}
       className={cn(
-        "glass-panel rounded-3xl overflow-hidden border border-white/5",
-        isMap ? "text-center font-bold flex flex-col items-center bg-zinc-900 p-0 shadow-xl w-72 sm:w-80 relative" : "shadow-lg bg-black/40 relative z-10 w-full"
+        "glass-panel rounded-3xl overflow-hidden border border-white/5 flex flex-col",
+        isMap ? "text-center font-bold items-center bg-zinc-900 p-0 shadow-xl w-72 sm:w-80 relative" : "shadow-lg bg-black/40 relative z-10 w-full",
+        className
       )}
     >
       {/* Header (Only in Feed) */}
@@ -226,7 +230,7 @@ export default function GarbageCard({
       {/* Photo */}
       <div 
         className={cn(
-          "w-full relative bg-[#000000]",
+          "w-full relative bg-[#000000] flex-1 min-h-[250px]",
           isMap ? "p-3 pb-0 cursor-pointer" : "border-y border-[#10b981]/20 cursor-pointer active:scale-[0.98] transition-transform"
         )}
         onClick={() => { if (onImageClick) onImageClick(); }}
@@ -243,7 +247,7 @@ export default function GarbageCard({
             </div>
           </div>
         ) : (
-          <div className={cn("w-full relative", isMap ? "h-32" : "aspect-square")}>
+          <div className={cn("w-full h-full relative", isMap ? "h-32" : "")}>
             {post.image_base64 ? (
               <img src={getImageUrl(post.image_base64)} alt="Report" className={cn("w-full h-full object-cover", isMap ? "rounded-lg" : "")} crossOrigin="anonymous" />
             ) : (

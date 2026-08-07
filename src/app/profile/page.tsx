@@ -17,6 +17,7 @@ export default function ProfilePage() {
   const [cleanupsCount, setCleanupsCount] = useState(0);
   const [locationName, setLocationName] = useState("Locating...");
   const [badgeMessage, setBadgeMessage] = useState<{ title: string, text: string } | null>(null);
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
 
   useEffect(() => {
     getUserStreak(getCurrentUser()).then(setStreak);
@@ -88,7 +89,14 @@ export default function ProfilePage() {
   if (loading) return null;
 
   return (
-    <div className="p-4 space-y-6 h-full overflow-y-auto pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10">
+    <div 
+      onScroll={(e) => {
+        const isScrolled = e.currentTarget.scrollTop > 20;
+        if (isScrolled !== isHeaderHidden) setIsHeaderHidden(isScrolled);
+        window.dispatchEvent(new CustomEvent('scrollStateChange', { detail: { isScrolled } }));
+      }}
+      className="p-4 space-y-6 h-full overflow-y-auto pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10"
+    >
       <AnimatePresence>
         {badgeMessage && (
           <motion.div
@@ -120,7 +128,12 @@ export default function ProfilePage() {
 
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+        animate={{ 
+          opacity: isHeaderHidden ? 0 : 1, 
+          y: isHeaderHidden ? -20 : 0,
+          pointerEvents: isHeaderHidden ? 'none' : 'auto'
+        }}
+        transition={{ duration: 0.2 }}
         className="flex flex-col items-start justify-center mt-2 space-y-1 w-full max-w-[calc(100%-150px)]"
       >
         <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight truncate w-full">
@@ -133,18 +146,10 @@ export default function ProfilePage() {
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.1 }}
-        className="glass-panel p-5 rounded-3xl mt-6 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-md shadow-xl flex justify-center overflow-hidden"
-      >
-        <ProgressionTree level={user.level} xp={user.xp} nextLevelXp={nextLevelXp} />
-      </motion.div>
-
-      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.1 }}
+        className="mt-6"
       >
         <h3 className="text-xl font-bold text-white mb-4">Your Stats</h3>
         <div className="grid grid-cols-2 gap-4">
@@ -171,6 +176,24 @@ export default function ProfilePage() {
               <p className="text-[10px] text-[#d4af37]/70 font-bold uppercase tracking-widest mt-1">Eco Credits</p>
             </div>
           </div>
+        </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.2 }}
+        className="glass-panel p-6 rounded-3xl mt-6 border border-[#10b981]/20 bg-[#10b981]/10 backdrop-blur-md shadow-xl flex flex-col items-center overflow-hidden relative"
+      >
+        <div className="text-center z-20 relative mb-2">
+          <h3 className="text-xl font-black text-white tracking-tight drop-shadow-md">Cultivate Your Legacy</h3>
+          <p className="text-[11px] text-white/70 font-medium leading-relaxed max-w-[290px] mx-auto mt-1.5">
+            Every piece of litter you clear breathes life into this seed. Nurture it to full maturity, and we will plant a real tree in your name.
+          </p>
+        </div>
+        
+        <div className="w-full flex justify-center -mt-2">
+          <ProgressionTree level={user.level} xp={user.xp} nextLevelXp={nextLevelXp} />
         </div>
       </motion.div>
 

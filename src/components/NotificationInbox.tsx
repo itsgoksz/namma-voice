@@ -14,6 +14,13 @@ export default function NotificationInbox() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasPermission, setHasPermission] = useState(false);
   const [streak, setStreak] = useState(0);
+  const [isHidden, setIsHidden] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = (e: any) => setIsHidden(e.detail.isScrolled);
+    window.addEventListener('scrollStateChange', handleScroll);
+    return () => window.removeEventListener('scrollStateChange', handleScroll);
+  }, []);
 
   useEffect(() => {
     // Request Native Push Notification Permission
@@ -91,7 +98,10 @@ export default function NotificationInbox() {
   };
 
   return (
-    <div 
+    <motion.div 
+      initial={false}
+      animate={{ opacity: isHidden ? 0 : 1, y: isHidden ? -20 : 0, pointerEvents: isHidden ? 'none' : 'auto' }}
+      transition={{ duration: 0.2 }}
       className="absolute right-4 z-[900] flex items-center space-x-3"
       style={{ top: 'var(--header-top)' }}
     >
@@ -169,6 +179,6 @@ export default function NotificationInbox() {
           </>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }

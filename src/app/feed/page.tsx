@@ -55,8 +55,8 @@ export default function FeedPage() {
   const [isCleaningUp, setIsCleaningUp] = useState<number | null>(null);
   const [volunteeredPosts, setVolunteeredPosts] = useState<Set<number>>(new Set());
   const [activePost, setActivePost] = useState<FeedItem | null>(null);
-  
   const [errorPopup, setErrorPopup] = useState<{ title: string; message: string } | null>(null);
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
 
   const { supportedPosts, handleSupport, handleFlag, handleOrganise, handleUserClick, PostActionModals } = usePostActions({
     onUpdatePost: (id, updater) => setFeed(prev => prev.map(p => p.id === id ? updater(p as any) as any : p)),
@@ -389,15 +389,25 @@ export default function FeedPage() {
     if (hours < 24) return `${hours}h ago`;
     return `${Math.floor(hours / 24)}d ago`;
   };
-
   return (
-    <div className={cn(
+    <div 
+      onScroll={(e) => {
+        const isScrolled = e.currentTarget.scrollTop > 20;
+        if (isScrolled !== isHeaderHidden) setIsHeaderHidden(isScrolled);
+        window.dispatchEvent(new CustomEvent('scrollStateChange', { detail: { isScrolled } }));
+      }}
+      className={cn(
       "p-4 space-y-6 h-full flex flex-col pt-safe-header pb-[calc(env(safe-area-inset-bottom)+8rem)] max-w-md mx-auto relative z-10",
       (activePost || splitModalData) ? "overflow-hidden touch-none" : "overflow-y-auto"
     )}>
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+        animate={{ 
+          opacity: isHeaderHidden ? 0 : 1, 
+          y: isHeaderHidden ? -20 : 0,
+          pointerEvents: isHeaderHidden ? 'none' : 'auto'
+        }}
+        transition={{ duration: 0.2 }}
         className="flex flex-col items-start justify-center mt-2 space-y-1 w-full max-w-[calc(100%-150px)]"
       >
         <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight truncate w-full">Community</h1>
@@ -419,6 +429,7 @@ export default function FeedPage() {
           {feed.map((post, i) => (
             <GarbageCard
               key={post.id}
+              className="h-[calc(100svh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-15.5rem)] shrink-0"
               layoutId={`post-${post.id}`}
               post={post}
               variant="feed"

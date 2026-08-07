@@ -75,3 +75,25 @@ BEFORE UPDATE ON users
 FOR EACH ROW
 WHEN (NEW.xp IS DISTINCT FROM OLD.xp)
 EXECUTE FUNCTION update_user_level();
+
+-- 6. Comprehensive Public Access for report_supports
+-- Enable RLS
+ALTER TABLE public.report_supports ENABLE ROW LEVEL SECURITY;
+
+-- Drop any conflicting policies
+DROP POLICY IF EXISTS "Allow public SELECT on report_supports" ON public.report_supports;
+DROP POLICY IF EXISTS "Allow public INSERT on report_supports" ON public.report_supports;
+DROP POLICY IF EXISTS "Allow public DELETE on report_supports" ON public.report_supports;
+
+-- Create absolute permissive policies
+CREATE POLICY "Allow public SELECT on report_supports" ON public.report_supports FOR SELECT USING (true);
+CREATE POLICY "Allow public INSERT on report_supports" ON public.report_supports FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public DELETE on report_supports" ON public.report_supports FOR DELETE USING (true);
+
+-- Explicitly grant table permissions to API roles
+GRANT ALL ON public.report_supports TO anon;
+GRANT ALL ON public.report_supports TO authenticated;
+GRANT ALL ON public.report_supports TO service_role;
+-- 6. Add Public Select Policy for report_supports
+CREATE POLICY "Allow public SELECT on report_supports" ON report_supports FOR SELECT USING (true);
+

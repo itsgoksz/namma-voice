@@ -21,6 +21,8 @@ import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { calculateTerritoryLeaderboard, AreaStats } from '@/lib/territories';
 import GarbageCard from '@/components/GarbageCard';
 import { usePostActions } from '@/hooks/usePostActions';
+import territoriesData from '@/data/territories.json';
+import DynamicIsland from '@/components/DynamicIsland';
 
 // Initial center
 const center: [number, number] = [12.9000, 77.5850];
@@ -157,9 +159,10 @@ interface GarbageMapProps {
   userLoc?: { lat: number; lng: number; heading?: number | null } | null;
   externalRouteDest?: { lat: number; lng: number } | null;
   onActiveRouteChange?: (isActive: boolean) => void;
+  xpEvent?: { amount: number; id: string } | null;
 }
 
-export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteChange }: GarbageMapProps) {
+export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteChange, xpEvent }: GarbageMapProps) {
   const mapRef = useRef<MapRef>(null);
   
   const [zoom, setZoom] = useState(13.5);
@@ -194,19 +197,12 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const offRouteCounter = useRef(0);
 
-  const [territories, setTerritories] = useState<any>(null);
+  const [territories, setTerritories] = useState<any>(territoriesData);
   const hoveredTerritoryId = useRef<number | string | null>(null);
   const [hoveredTerritoryData, setHoveredTerritoryData] = useState<AreaStats | null>(null);
   const [selectedTerritory, setSelectedTerritory] = useState<(AreaStats & { id: number }) | null>(null);
   const [reportSupports, setReportSupports] = useState<any[]>([]);
   const isMarkerClicked = useRef(false);
-
-  useEffect(() => {
-    fetch('/territories.json')
-      .then(res => res.json())
-      .then(data => setTerritories(data))
-      .catch(console.error);
-  }, []);
 
   const handleMapMove = useCallback(() => {
     if (!mapRef.current || isLiveNavigation) return;
@@ -340,10 +336,19 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const [{ data, error }, { data: supportsData }] = await Promise.all([
-          supabase.from('reports').select('*'),
-          supabase.from('report_supports').select('report_id, username')
-        ]);
+        let data, error;
+        if (typeof window !== 'undefined' && (window as any).__nammaHotspotsPromise) {
+          const res = await (window as any).__nammaHotspotsPromise;
+          data = res.data;
+          error = res.error;
+          (window as any).__nammaHotspotsPromise = null;
+        } else {
+          const res = await supabase.from('reports').select('*');
+          data = res.data;
+          error = res.error;
+        }
+        
+        const { data: supportsData } = await supabase.from('report_supports').select('report_id, username');
         if (error || !data) return;
         
         if (supportsData) setReportSupports(supportsData);
@@ -368,7 +373,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
     fetchReports();
 
     const subscription = supabase
-      .channel('public:reports')
+      .channel(`public:reports-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
         fetchReports();
       })
@@ -486,6 +491,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
           longitude: userLoc?.lng || center[1],
           zoom: 13.5
         }}
+        padding={{ top: 90, bottom: 90 }}
         onMove={handleMapMove}
         onMoveEnd={evt => {
           setZoom(evt.viewState.zoom);
@@ -1036,25 +1042,53 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
         )}
       </Map>
 
+      {/* Dynamic Island Component */}
+      <DynamicIsland
+        userLoc={userLoc || null}
+        hotspots={hotspots}
+        isLiveNavigation={isLiveNavigation}
+        navDistance={routeSteps && currentStepIndex < routeSteps.length ? Math.round(routeSteps[currentStepIndex].distance) : undefined}
+        navInstruction={routeSteps && currentStepIndex < routeSteps.length ? routeSteps[currentStepIndex].maneuver.instruction : undefined}
+        xpEvent={xpEvent || null}
+      />
+
       {/* Overlays */}
       <AnimatePresence>
         {(guardian || selectedTerritory || hoveredTerritoryData) && !activeRoute && !selectedSpot && (
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-4 left-4 z-[999] pointer-events-auto"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="absolute top-4 left-4 z-[999] pointer-events-none"
           >
-            <div className="glass-panel p-3.5 rounded-2xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
-              <h4 className="text-white font-black text-sm mb-1 tracking-wide flex items-center">
+            <div className="glass-panel p-3 rounded-2xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)] flex flex-col items-start bg-black/60 backdrop-blur-md pointer-events-auto min-w-[130px] max-w-[160px]">
+              <span className="text-white font-black text-[13px] tracking-wide mb-2 leading-tight">
                 {(selectedTerritory || hoveredTerritoryData)?.area ?? "South Bengaluru"}
-              </h4>
-              <p className="text-[#ff4d6d] text-xs font-bold mb-2">
-                {(selectedTerritory || hoveredTerritoryData)?.reports ?? hotspots.length} reports live
-              </p>
-              <div className="bg-black/50 rounded-lg p-2 border border-white/5">
-                <p className="text-[#d4af37] text-[10px] font-black uppercase tracking-widest mb-0.5">Sector Guardian</p>
-                <p className="text-white font-black text-xs truncate max-w-[140px]">@{(selectedTerritory || hoveredTerritoryData)?.guardian ?? guardian}</p>
+              </span>
+              <div className="flex flex-col space-y-1.5 w-full">
+                <span className="text-[#ff4d6d] text-[10px] font-bold uppercase tracking-wider flex items-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#ff4d6d] animate-pulse mr-1.5 shadow-[0_0_5px_#ff4d6d]"></span>
+                  {(selectedTerritory || hoveredTerritoryData)?.reports ?? hotspots.length} Live Reports
+                </span>
+                <span className="text-[#d4af37] text-[10px] font-bold uppercase tracking-wider flex items-center">
+                  <Shield className="w-3 h-3 mr-1.5 shrink-0" />
+                  <span className="truncate">
+                    {(() => {
+                      const localGuardian = (selectedTerritory || hoveredTerritoryData)?.guardian;
+                      const isHoveringTerritory = !!(selectedTerritory || hoveredTerritoryData);
+                      
+                      if (isHoveringTerritory && !localGuardian) {
+                        return <span className="text-zinc-400">Unclaimed Area</span>;
+                      }
+                      
+                      if (localGuardian) {
+                        return `Guardian: @${localGuardian}`;
+                      }
+                      
+                      return `Sector Guardian: @${guardian}`;
+                    })()}
+                  </span>
+                </span>
               </div>
             </div>
           </motion.div>
@@ -1213,17 +1247,25 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto"
-                onClick={() => setActivePost(null)}
+                onClick={() => {
+                  setActivePost(null);
+                  setSelectedSpot(null);
+                }}
               />
               <div
                 className="w-full sm:max-w-md max-h-full overflow-y-auto no-scrollbar relative pointer-events-auto flex flex-col z-10"
               >
-                <button 
-                  onClick={() => setActivePost(null)}
-                  className="absolute top-4 right-4 z-50 w-8 h-8 bg-black/50 hover:bg-black/80 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white/80 hover:text-white transition-colors shadow-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex justify-end w-full mb-3">
+                  <button 
+                    onClick={() => {
+                      setActivePost(null);
+                      setSelectedSpot(null);
+                    }}
+                    className="w-10 h-10 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-full flex items-center justify-center text-white/80 hover:text-white transition-colors shadow-lg"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
                 <GarbageCard
                    layoutId={`post-${activePost.id}`}
                    post={activePost as any}
