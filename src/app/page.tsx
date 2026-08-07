@@ -65,6 +65,8 @@ export default function Home() {
   const [claims, setClaims] = useState<Record<string, boolean>>({});
   const [completions, setCompletions] = useState<Record<string, boolean>>({});
   const [missionRouteDest, setMissionRouteDest] = useState<{ lat: number, lng: number } | null>(null);
+  const [navInstruction, setNavInstruction] = useState<string | undefined>(undefined);
+  const [navDistance, setNavDistance] = useState<number | undefined>(undefined);
   const [isMapRouting, setIsMapRouting] = useState(false);
   const [isMissionsCollapsed, setIsMissionsCollapsed] = useState(true);
   const [hasOpenedMissions, setHasOpenedMissions] = useState(false);
@@ -263,7 +265,14 @@ export default function Home() {
               transition={{ delay: 0.2 }}
               className="w-full absolute top-0 left-0 right-0 z-0 h-full"
             >
-              <GarbageMap userLoc={userLoc} externalRouteDest={missionRouteDest} onActiveRouteChange={setIsMapRouting} xpEvent={xpEvent} />
+              <GarbageMap 
+                userLoc={userLoc} 
+                externalRouteDest={missionRouteDest} 
+                onActiveRouteChange={setIsMapRouting} 
+                xpEvent={xpEvent}
+                onNavInstructionChange={setNavInstruction}
+                onNavDistanceChange={setNavDistance}
+              />
 
               {/* Combined Missions & Nearest Cleanup Overlay */}
               <AnimatePresence>

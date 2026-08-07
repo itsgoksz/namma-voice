@@ -12,7 +12,7 @@ if (typeof window !== 'undefined') {
 import useSupercluster from "use-supercluster";
 import { getImageUrl } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
-import { Navigation, X, Loader2, LocateFixed, Trophy, Shield, AlertTriangle } from "lucide-react";
+import { Navigation, X, Loader2, LocateFixed, Trophy, Shield, AlertTriangle, Footprints, Car } from "lucide-react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
@@ -23,6 +23,7 @@ import GarbageCard from '@/components/GarbageCard';
 import { usePostActions } from '@/hooks/usePostActions';
 import territoriesData from '@/data/territories.json';
 import DynamicIsland from '@/components/DynamicIsland';
+import { cn } from '@/lib/utils';
 
 // Initial center
 const center: [number, number] = [12.9000, 77.5850];
@@ -160,9 +161,11 @@ interface GarbageMapProps {
   externalRouteDest?: { lat: number; lng: number } | null;
   onActiveRouteChange?: (isActive: boolean) => void;
   xpEvent?: { amount: number; id: string } | null;
+  onNavInstructionChange?: (instruction: string | undefined) => void;
+  onNavDistanceChange?: (distance: number | undefined) => void;
 }
 
-export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteChange, xpEvent }: GarbageMapProps) {
+export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteChange, xpEvent, onNavInstructionChange, onNavDistanceChange }: GarbageMapProps) {
   const mapRef = useRef<MapRef>(null);
   
   const [zoom, setZoom] = useState(13.5);
@@ -189,9 +192,12 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
     onSuccess: (title, message) => alert(`${title}\n${message}`),
   });
   const [currentDestination, setCurrentDestination] = useState<{lat: number, lng: number} | null>(null);
+  const [routingProfile, setRoutingProfile] = useState<'foot' | 'driving'>('foot');
   const [isRouting, setIsRouting] = useState(false);
   const [isLiveNavigation, setIsLiveNavigation] = useState(false);
   const [isCameraLocked, setIsCameraLocked] = useState(true);
+  const [navInstruction, setNavInstruction] = useState<string | undefined>(undefined);
+  const [navDistance, setNavDistance] = useState<number | undefined>(undefined);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [routeSteps, setRouteSteps] = useState<any[] | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -227,6 +233,46 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
       }
     });
   }, [hotspots, isLiveNavigation]);
+
+  useEffect(() => {
+    if (currentStepIndex !== null && routeSteps && routeSteps[currentStepIndex]) {
+      const currentStep = routeSteps[currentStepIndex];
+      const isArrive = currentStep.maneuver.type === 'arrive';
+      // getDistanceInMeters must be available here. It is defined later in the file.
+      // Wait, is getDistanceInMeters in scope here?
+      const getDistanceInMetersLocal = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371e3;
+        const φ1 = lat1 * Math.PI / 180;
+        const φ2 = lat2 * Math.PI / 180;
+        const Δφ = (lat2 - lat1) * Math.PI / 180;
+        const Δλ = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+          Math.cos(φ1) * Math.cos(φ2) *
+          Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      };
+
+      const distToManeuver = userLoc ? Math.round(getDistanceInMetersLocal(userLoc.lat, userLoc.lng, currentStep.maneuver.location[1], currentStep.maneuver.location[0])) : Math.round(currentStep.distance);
+      const hasArrived = isArrive && distToManeuver <= 25;
+      
+      let inst = "";
+      if (hasArrived) inst = "Arrived at location";
+      else if (currentStep.maneuver.modifier) inst = `Turn ${currentStep.maneuver.modifier.replace(/-/g, ' ')}`;
+      else if (isArrive) inst = "Arrive at destination";
+      else inst = "Continue straight";
+
+      if (!hasArrived && !isArrive && currentStep.name) {
+        inst += ` on ${currentStep.name}`;
+      }
+
+      setNavInstruction(inst);
+      setNavDistance(distToManeuver);
+      onNavInstructionChange?.(inst);
+      onNavDistanceChange?.(distToManeuver);
+    }
+  }, [currentStepIndex, routeSteps, userLoc, onNavInstructionChange, onNavDistanceChange]);
+
   // Sync externalRouteDest to currentDestination
   useEffect(() => {
     setCurrentDestination(externalRouteDest || null);
@@ -250,7 +296,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
           const start = { lng: userLoc.lng, lat: userLoc.lat };
           const end = { lng: currentDestination.lng, lat: currentDestination.lat };
           const response = await fetch(
-            `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson&steps=true`
+            `https://router.project-osrm.org/route/v1/${routingProfile}/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson&steps=true`
           );
           const data = await response.json();
           if (data.routes?.length > 0) {
@@ -287,7 +333,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
       };
       fetchRoute();
     }
-  }, [currentDestination, userLoc, fullRoute]);
+  }, [currentDestination, userLoc, fullRoute, routingProfile]);
 
   // Dynamic route progression
   useEffect(() => {
@@ -502,7 +548,6 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
           setBounds(evt.target.getBounds().toArray().flat() as [number, number, number, number]);
         }}
         ref={mapRef}
-// ... (render)
         mapStyle={rasterMapStyle as any}
         maxBounds={allowedBounds}
         maxZoom={22}
@@ -1047,8 +1092,8 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
         userLoc={userLoc || null}
         hotspots={hotspots}
         isLiveNavigation={isLiveNavigation}
-        navDistance={routeSteps && currentStepIndex < routeSteps.length ? Math.round(routeSteps[currentStepIndex].distance) : undefined}
-        navInstruction={routeSteps && currentStepIndex < routeSteps.length ? routeSteps[currentStepIndex].maneuver.instruction : undefined}
+        navDistance={navDistance}
+        navInstruction={navInstruction}
         xpEvent={xpEvent || null}
       />
 
@@ -1094,42 +1139,27 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       {/* Turn-by-Turn Instruction Overlay */}
       <AnimatePresence>
-        {isLiveNavigation && routeSteps && currentStepIndex < routeSteps.length && (
+        {isLiveNavigation && routeSteps && currentStepIndex !== null && currentStepIndex < routeSteps.length && (
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className="absolute top-6 left-1/2 -translate-x-1/2 z-[999] pointer-events-auto w-[90%] max-w-sm"
           >
-            <div className="glass-panel p-4 rounded-3xl border border-[#10b981]/20 shadow-[0_15px_40px_rgba(0,0,0,0.6)] flex items-center space-x-4">
+            <div className="glass-panel p-4 rounded-3xl border border-[#10b981]/20 shadow-[0_15px_40px_rgba(0,0,0,0.6)] flex items-center space-x-4 bg-black/80 backdrop-blur-md">
               <div className="w-12 h-12 rounded-full bg-[#10b981]/20 flex items-center justify-center border border-[#10b981]/30 text-[#10b981]">
                 <Navigation className="w-6 h-6" />
               </div>
               <div className="flex-1">
-                {(() => {
-                  const currentStep = routeSteps[currentStepIndex];
-                  const isArrive = currentStep.maneuver.type === 'arrive';
-                  const distToManeuver = userLoc ? Math.round(getDistanceInMeters(userLoc.lat, userLoc.lng, currentStep.maneuver.location[1], currentStep.maneuver.location[0])) : Math.round(currentStep.distance);
-                  const hasArrived = isArrive && distToManeuver <= 25;
-                  
-                  return (
-                    <>
-                      <p className="text-white font-black text-lg leading-tight drop-shadow-md">
-                        {hasArrived ? "Arrived at location" : currentStep.maneuver.modifier 
-                          ? `Turn ${currentStep.maneuver.modifier.replace(/-/g, ' ')}` 
-                          : isArrive 
-                            ? "Arrive at destination" 
-                            : "Continue straight"}
-                      </p>
-                      <p className="text-[#10b981] font-bold text-sm">
-                        {hasArrived ? "You have reached your destination" : `${currentStep.name || "Unnamed road"} • ${distToManeuver}m`}
-                      </p>
-                    </>
-                  );
-                })()}
+                <p className="text-white font-black text-lg leading-tight drop-shadow-md">
+                  {navInstruction?.split(' on ')[0] || "Proceed to route"}
+                </p>
+                <p className="text-[#10b981] font-bold text-sm">
+                  {navInstruction?.includes(' on ') ? `${navInstruction.split(' on ')[1]} • ${navDistance}m` : `${navDistance}m`}
+                </p>
               </div>
             </div>
           </motion.div>
@@ -1156,6 +1186,53 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
       {/* Navigation Overlays */}
       {activeRoute && (
         <>
+          <AnimatePresence>
+            {!isLiveNavigation && (
+              <motion.div
+                key="routing-profile-selector"
+                initial={{ opacity: 0, scale: 0.9, y: -20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                className="absolute left-1/2 -translate-x-1/2 top-6 z-[999] pointer-events-auto transition-all duration-500"
+              >
+              <div className="glass-panel p-1.5 rounded-full border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.6)] flex items-center space-x-1 bg-black/70 backdrop-blur-xl">
+                <button
+                  onClick={() => {
+                    if (routingProfile !== 'foot') {
+                      Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                      setRoutingProfile('foot');
+                      setFullRoute(null);
+                    }
+                  }}
+                  className={cn(
+                    "px-5 py-2.5 rounded-full text-xs font-black tracking-wide uppercase transition-all duration-300 flex items-center space-x-2",
+                    routingProfile === 'foot' ? "bg-[#10b981] text-white shadow-[0_0_15px_rgba(16,185,129,0.5)]" : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  <Footprints className="w-4 h-4" />
+                  <span>Walk</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (routingProfile !== 'driving') {
+                      Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                      setRoutingProfile('driving');
+                      setFullRoute(null);
+                    }
+                  }}
+                  className={cn(
+                    "px-5 py-2.5 rounded-full text-xs font-black tracking-wide uppercase transition-all duration-300 flex items-center space-x-2",
+                    routingProfile === 'driving' ? "bg-[#3b82f6] text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  <Car className="w-4 h-4" />
+                  <span>Drive</span>
+                </button>
+              </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <AnimatePresence>
             {(isLiveNavigation && !isCameraLocked) && (
               <motion.button
@@ -1186,12 +1263,13 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
             )}
           </AnimatePresence>
 
-          <div className="absolute bottom-4 right-4 z-[999] pointer-events-auto h-12 w-32">
-            <AnimatePresence>
+          <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] left-1/2 -translate-x-1/2 z-[999] pointer-events-auto flex items-center justify-center space-x-6 h-14">
+            <AnimatePresence mode="popLayout">
               <motion.button
                 key="exit-button"
+                layout
                 initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1, x: isLiveNavigation ? 0 : -60 }}
+                animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 onClick={() => {
@@ -1199,6 +1277,8 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                   setActiveRoute(null);
                   setFullRoute(null);
                   setCurrentDestination(null);
+                  onNavInstructionChange?.(undefined);
+                  onNavDistanceChange?.(undefined);
                   if (mapRef.current) {
                     if (selectedSpot) {
                       mapRef.current.flyTo({ center: [selectedSpot.pos[1], selectedSpot.pos[0]], zoom: 17, pitch: 0, bearing: 0, duration: 1500 });
@@ -1207,7 +1287,7 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
                     }
                   }
                 }}
-                className="absolute right-0 top-0 bg-[#ff4d6d] text-white font-black w-12 h-12 p-0 rounded-full shadow-[0_0_20px_rgba(255,77,109,0.5)] active:scale-90 transition-colors flex items-center justify-center border border-[#ff4d6d]/30 shrink-0"
+                className="bg-[#ff4d6d] text-white font-black w-14 h-14 p-0 rounded-full shadow-[0_0_20px_rgba(255,77,109,0.5)] active:scale-90 transition-colors flex items-center justify-center border border-[#ff4d6d]/30 shrink-0"
               >
                 <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M6 18L18 6M6 6l12 12" />
@@ -1217,12 +1297,13 @@ export default function GarbageMap({ userLoc, externalRouteDest, onActiveRouteCh
               {!isLiveNavigation && (
                 <motion.button
                   key="start-button"
+                  layout
                   initial={{ scale: 0.5, opacity: 0, x: -30 }}
                   animate={{ scale: 1, opacity: 1, x: 0 }}
                   exit={{ scale: 0.5, opacity: 0, x: -30, rotate: -45 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   onClick={() => { setIsLiveNavigation(true); setIsCameraLocked(true); }}
-                  className="absolute right-0 top-0 bg-[#10b981] text-white font-black w-12 h-12 p-0 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.5)] active:scale-90 transition-colors flex items-center justify-center border border-[#10b981]/30"
+                  className="bg-[#10b981] text-white font-black w-14 h-14 p-0 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.5)] active:scale-90 transition-colors flex items-center justify-center border border-[#10b981]/30 shrink-0"
                 >
                   <svg className="w-8 h-8 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M7 5l13 7-13 7z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />

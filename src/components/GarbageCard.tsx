@@ -230,24 +230,24 @@ export default function GarbageCard({
       {/* Photo */}
       <div 
         className={cn(
-          "w-full relative bg-[#000000] flex-1 min-h-[250px]",
-          isMap ? "p-3 pb-0 cursor-pointer" : "border-y border-[#10b981]/20 cursor-pointer active:scale-[0.98] transition-transform"
+          "w-full relative bg-[#000000] flex-1",
+          isMap ? "p-3 pb-0 cursor-pointer" : "min-h-[250px] border-y border-[#10b981]/20 cursor-pointer active:scale-[0.98] transition-transform"
         )}
         onClick={() => { if (onImageClick) onImageClick(); }}
       >
         {post.cleanup_image_base64 ? (
           <div className="grid grid-cols-2 gap-1">
-            <div className={cn("relative", isMap ? "h-24" : "aspect-square")}>
+            <div className={cn("relative", isMap ? "aspect-[4/3]" : "aspect-square")}>
               <img src={getImageUrl(post.image_base64 || "")} alt="Before" className={cn("w-full h-full object-cover", isMap ? "rounded-l-lg" : "")} crossOrigin="anonymous" />
               <div className="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded text-[10px] font-bold text-white tracking-widest uppercase">Before</div>
             </div>
-            <div className={cn("relative border-l border-[#10b981]/20", isMap ? "h-24" : "aspect-square")}>
+            <div className={cn("relative border-l border-[#10b981]/20", isMap ? "aspect-[4/3]" : "aspect-square")}>
               <img src={getImageUrl(post.cleanup_image_base64)} alt="After" className={cn("w-full h-full object-cover", isMap ? "rounded-r-lg" : "")} crossOrigin="anonymous" />
               <div className="absolute top-2 left-2 bg-[#2E6F40]/80 px-2 py-1 rounded text-[10px] font-bold text-white tracking-widest uppercase">Cleaned</div>
             </div>
           </div>
         ) : (
-          <div className={cn("w-full h-full relative", isMap ? "h-32" : "")}>
+          <div className={cn("w-full relative", isMap ? "aspect-[4/3]" : "h-full")}>
             {post.image_base64 ? (
               <img src={getImageUrl(post.image_base64)} alt="Report" className={cn("w-full h-full object-cover", isMap ? "rounded-lg" : "")} crossOrigin="anonymous" />
             ) : (
